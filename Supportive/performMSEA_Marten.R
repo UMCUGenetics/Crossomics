@@ -21,6 +21,7 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
   # This is a check, I think there shouldn't be any is.na(p)
   p.values = p.values[!is.na(p.values)]
   
+  # average of the control intensity values and paste it to the end of the previous matrix
   avg.int.c = apply(p_valuesAll[,grep("C", colnames(p_valuesAll), fixed = TRUE)], 1, mean)
   p_valuesAll = cbind(p_valuesAll,"avg.int.controls"=avg.int.c) 
   
@@ -31,7 +32,7 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
   # 
   # names(all.mets.assi) = names(p.values)
   
-  # This one replaces the 4 lines above:
+  # This one replaces the 4 lines above: Get all HMDB codes that exceed either one of the threshold values
   all.mets.assi <- p.values > thresh_F_pos | p.values < thresh_F_neg
   
   # dit moet voor verdubbelen van rijen <====================================!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -72,10 +73,12 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
   
   # 1. split the rownames of p.values on " ", ";" and "_" and keep only the HMDB identifiers
   # 2. get a boolean vector of length nrow(p.values) where the identifiers are present in the metaboliteSet[,"hmdb"]
-  index <- unlist(lapply(names(p.values),function(x){
-    #     any(as.vector(unlist(lapply(strsplit(as.vector(unlist(strsplit(as.vector(unlist(strsplit(x, split ="_")))[1], split =";")))[-1], split =" "), function(y) y[1]))) %in% metaboliteSet[,"hmdb"])
-    any(unlist(lapply(strsplit(unlist(strsplit(unlist(strsplit(x, split ="_"))[1], split =";")), split =" "), function(y) y[1])) %in% metaboliteSet[,"hmdb"])
-  }))
+  # index <- unlist(lapply(names(p.values),function(x){
+  #   #     any(as.vector(unlist(lapply(strsplit(as.vector(unlist(strsplit(as.vector(unlist(strsplit(x, split ="_")))[1], split =";")))[-1], split =" "), function(y) y[1]))) %in% metaboliteSet[,"hmdb"])
+  #   any(unlist(lapply(strsplit(unlist(strsplit(unlist(strsplit(x, split ="_"))[1], split =";")), split =" "), function(y) y[1])) %in% metaboliteSet[,"hmdb"])
+  # }))
+  # This is the replacement of the above function, get the location of all p.values-names present in the metaboliteSet
+  index <- names(p.values) %in% metaboliteSet[,"hmdb"]
   # x=names(metsInset)[1]
   metsInset <- data.frame("InSetAboveThres" = all.mets.assi[index])
   # metsInset <- all.mets.assi
@@ -143,8 +146,9 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
     #   paste(paste(paste(unlist(lapply(hmdb, function(y){unique(metaboliteSet[which(metaboliteSet[,"hmdb"]==y),"met_long"])[1]})), adduct), collapse = "; "),mode,sep="_")
     # })) 
   
+  # All reaction paths present for the hmdb codes
     # paths = unlist(lapply(names(metsInset), function(x){
-    paths = unlist(lapply(rownames(metsInset), function(x){
+    paths <- unlist(lapply(rownames(metsInset), function(x){
       # x=names(metsInset)[6]
       # hmdb=unlist(lapply(strsplit(unlist(strsplit(unlist(strsplit(x, split ="_"))[1], split =";")), split =" "), function(y) y[1]))
       hmdb <- x
@@ -152,6 +156,7 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
       hmdb=unique(hmdb[index])
       paste(unlist(lapply(hmdb, function(y){unique(metaboliteSet[which(metaboliteSet[,"hmdb"]==y),"path"])[1]})), collapse = "; ")
     }))
+    # All hmdbs present for this 
     # hmdb_set = unlist(lapply(names(metsInset), function(x){
     hmdb_set = unlist(lapply(rownames(metsInset), function(x){
       # x=names(metsInset)[3]
