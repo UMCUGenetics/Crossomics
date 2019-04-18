@@ -1,5 +1,5 @@
-performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, test, top = 20, id="hmdb", adductsSummed=FALSE){
-  # p_valuesAll=p.values
+performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, test, top = 20, id="hmdb", adductsSummed=FALSE){
+  # av_int_and_z_values_matrix=patient_z_values_vector
   # patient=patients[i]
   # test=3
   
@@ -7,42 +7,42 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
   # set the dimensions of the pictures for later
   width=1024
   height=768
-  # Fold Change is put to the power a (g_i = round(abs(log2(foldChange))^a))
-  # a=0.5 # if 0 only crossing the thresh affects enrichment (x^0=1)
-  # a=0
-  # a=0.25
-  # a=3
-  a=1.2
+  # Fold Change is put to the power logFC_weight (weighted_logFC = round(abs(log2(foldChange))^logFC_weight))
+  # logFC_weight=0.5 # if 0 only crossing the thresh affects enrichment (x^0=1)
+  # logFC_weight=0
+  # logFC_weight=0.25
+  # logFC_weight=3
+  logFC_weight=1.2
   
   label=paste("z.average_P",patient,sep = "")
   # label=paste("p.value_P",patient,sep = "")
-  p.values = p_valuesAll[,label]
+  patient_z_values_vector = av_int_and_z_values_matrix[,label]
   
-  # This is a check, I think there shouldn't be any is.na(p)
-  p.values = p.values[!is.na(p.values)]
+  # This is logFC_weight check, I think there shouldn't be any is.na(p)
+  patient_z_values_vector = patient_z_values_vector[!is.na(patient_z_values_vector)]
   
   # average of the control intensity values and paste it to the end of the previous matrix
-  avg.int.c = apply(p_valuesAll[,grep("C", colnames(p_valuesAll), fixed = TRUE)], 1, mean)
-  p_valuesAll = cbind(p_valuesAll,"avg.int.controls"=avg.int.c) 
+  avg.int.c = apply(av_int_and_z_values_matrix[,grep("C", colnames(av_int_and_z_values_matrix), fixed = TRUE)], 1, mean)
+  av_int_and_z_values_matrix = cbind(av_int_and_z_values_matrix,"avg.int.controls"=avg.int.c) 
   
   # Z-scores that exceed the positive/negative threshold
-  # all.mets.assi.pos = as.integer(p.values > thresh_F_pos)
-  # all.mets.assi.neg = as.integer(p.values < thresh_F_neg)
-  # all.mets.assi = all.mets.assi.pos + all.mets.assi.neg
+  # allMetsExcedingThres.pos = as.integer(patient_z_values_vector > thresh_F_pos)
+  # allMetsExcedingThres.neg = as.integer(patient_z_values_vector < thresh_F_neg)
+  # allMetsExcedingThres = allMetsExcedingThres.pos + allMetsExcedingThres.neg
   # 
-  # names(all.mets.assi) = names(p.values)
+  # names(allMetsExcedingThres) = names(patient_z_values_vector)
   
-  # This one replaces the 4 lines above: Get all HMDB codes that exceed either one of the threshold values
-  all.mets.assi <- p.values > thresh_F_pos | p.values < thresh_F_neg
+  # This one replaces the 4 lines above: Get boolean of all HMDB codes indicating exceding either one of the threshold values
+  allMetsExcedingThres <- patient_z_values_vector > thresh_F_pos | patient_z_values_vector < thresh_F_neg
   
   # dit moet voor verdubbelen van rijen <====================================!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  # p.values.adj = p.adjust(p.values, method = "bonferroni") 
+  # patient_z_values_vector.adj = p.adjust(patient_z_values_vector, method = "bonferroni") 
   
   #   # recon 2.2 ######################################################################  
   #   id = "InChI_key"  
   #   
-  #   index1 = as.vector(unlist(lapply(names(p.values),function(x){
-  #     # x=names(p.values)[3]
+  #   index1 = as.vector(unlist(lapply(names(patient_z_values_vector),function(x){
+  #     # x=names(patient_z_values_vector)[3]
   #     tmp = as.vector(unlist(lapply(
   #         as.vector(unlist(strsplit(x, split =";")))[-1], function(y){
   #           # y=as.vector(unlist(strsplit(x, split =";")))[-1][1]
@@ -54,8 +54,8 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
   # 
   #   id = "chebi"  
   #   
-  #   index2 = as.vector(unlist(lapply(names(p.values),function(x){
-  #     # x=names(p.values)[3]
+  #   index2 = as.vector(unlist(lapply(names(patient_z_values_vector),function(x){
+  #     # x=names(patient_z_values_vector)[3]
   #     tmp = as.vector(unlist(lapply(
   #       as.vector(unlist(strsplit(x, split =";")))[-1], function(y){
   #         # y=as.vector(unlist(strsplit(x, split =";")))[-1][2]
@@ -67,31 +67,33 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
   #   
   #   index = union(which(index1==TRUE),which(index2==TRUE))
   #   
-  #   metsInset = all.mets.assi[index]
+  #   metsInset = allMetsExcedingThres[index]
   #   metsInset = cbind(metsInset, "names"=names(metsInset))
   #   #####################################################################################
   
-  # 1. split the rownames of p.values on " ", ";" and "_" and keep only the HMDB identifiers
-  # 2. get a boolean vector of length nrow(p.values) where the identifiers are present in the metaboliteSet[,"hmdb"]
-  # index <- unlist(lapply(names(p.values),function(x){
+  # 1. split the rownames of patient_z_values_vector on " ", ";" and "_" and keep only the HMDB identifiers
+  # 2. get logFC_weight boolean vector of length nrow(patient_z_values_vector) where the identifiers are present in the metaboliteSet[,"hmdb"]
+  # index <- unlist(lapply(names(patient_z_values_vector),function(x){
   #   #     any(as.vector(unlist(lapply(strsplit(as.vector(unlist(strsplit(as.vector(unlist(strsplit(x, split ="_")))[1], split =";")))[-1], split =" "), function(y) y[1]))) %in% metaboliteSet[,"hmdb"])
   #   any(unlist(lapply(strsplit(unlist(strsplit(unlist(strsplit(x, split ="_"))[1], split =";")), split =" "), function(y) y[1])) %in% metaboliteSet[,"hmdb"])
   # }))
-  # This is the replacement of the above function, get the location of all p.values-names present in the metaboliteSet
-  index <- names(p.values) %in% metaboliteSet[,"hmdb"]
+  # This is the replacement of the above function, get the location of all patient_z_values_vector-names present in the metaboliteSet
+  index <- names(patient_z_values_vector) %in% metaboliteSet[,"hmdb"]
   # x=names(metsInset)[1]
-  metsInset <- data.frame("InSetAboveThres" = all.mets.assi[index])
-  # metsInset <- all.mets.assi
+  metsInset <- data.frame("InSetAboveThres" = allMetsExcedingThres[index])
+  # metsInset <- allMetsExcedingThres
+  if(nrow(metsInset) == 0)   return(list("p.value"= 1))
+  
   
   # if (adductsSummed) {
   #   # NEW ONE, AS IN THE adductsSummed == FALSE, BELOW, ALSO ABOVE THIS IF-ELSE STATEMENT
-  #   # index = as.vector(unlist(lapply(names(p.values),function(x){
+  #   # index = as.vector(unlist(lapply(names(patient_z_values_vector),function(x){
   #   #   #     any(as.vector(unlist(lapply(strsplit(as.vector(unlist(strsplit(as.vector(unlist(strsplit(x, split ="_")))[1], split =";")))[-1], split =" "), function(y) y[1]))) %in% metaboliteSet[,"hmdb"])
   #   #   any(as.vector(unlist(lapply(strsplit(as.vector(unlist(strsplit(as.vector(unlist(strsplit(x, split ="_")))[1], split =";"))), split =" "), function(y) y[1]))) %in% metaboliteSet[,"hmdb"])
   #   # })))
   #   # OLD ONE, NOT WORKING
-  #   # index = which(names(p.values ) %in% metaboliteSet[,"hmdb"])
-  #   # metsInset = all.mets.assi[index]
+  #   # index = which(names(patient_z_values_vector ) %in% metaboliteSet[,"hmdb"])
+  #   # metsInset = allMetsExcedingThres[index]
   #   
   #   metNames = rep("", length(metsInset))
   #   for (i in 1:length(metsInset)){
@@ -104,11 +106,11 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
   #   if (length(metsInset)==0) return(NULL)
   #   
   # } else{
-  #   # index = as.vector(unlist(lapply(names(p.values),function(x){
+  #   # index = as.vector(unlist(lapply(names(patient_z_values_vector),function(x){
   #   #   #     any(as.vector(unlist(lapply(strsplit(as.vector(unlist(strsplit(as.vector(unlist(strsplit(x, split ="_")))[1], split =";")))[-1], split =" "), function(y) y[1]))) %in% metaboliteSet[,"hmdb"])
   #   #   any(as.vector(unlist(lapply(strsplit(as.vector(unlist(strsplit(as.vector(unlist(strsplit(x, split ="_")))[1], split =";"))), split =" "), function(y) y[1]))) %in% metaboliteSet[,"hmdb"])
   #   # })))
-  #   # metsInset = all.mets.assi[index]
+  #   # metsInset = allMetsExcedingThres[index]
   #   #print("jrrpa")
   #   #print(metsInset)
   #   # x=names(metsInset)[62]
@@ -142,7 +144,7 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
     #   hmdb=unique(hmdb[index])
     #   adduct=unique(adduct[index])
     #   print(paste("mode:", mode, " hmdb:", hmdb, " adduct:", adduct))
-    #   # paste the unique, long name of the metabolites in the hmdb column (of metaboliteSet) to the adduct, collapse it with a ; and paste with the mode
+    #   # paste the unique, long name of the metabolites in the hmdb column (of metaboliteSet) to the adduct, collapse it with logFC_weight ; and paste with the mode
     #   paste(paste(paste(unlist(lapply(hmdb, function(y){unique(metaboliteSet[which(metaboliteSet[,"hmdb"]==y),"met_long"])[1]})), adduct), collapse = "; "),mode,sep="_")
     # })) 
   
@@ -167,44 +169,53 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
     }))
     #print(metNames)  
   # }
-  foldChange = p_valuesAll[,2]/avg.int.c # Dangerous, go to Judith, 
-  g_i = round(abs(log2(foldChange))^a)
-  # g_i = round(abs(p.values)^a)
-  # metsInset=cbind(metsInset, "names"= metNames, "hmdb_set"= hmdb_set, "g_i"=g_i[index], "fc"=foldChange[index], "z-score"=p.values[names(metsInset)], "path"=paths)
-  metsInset=cbind(metsInset, "names"= metNames, "hmdb_set"= hmdb_set, "g_i"=g_i[index], "fc"=foldChange[index], "z-score"=p.values[rownames(metsInset)], "path"=paths)
+    
+  # Used for weighted Fishers test
+  # foldChange = av_int_and_z_values_matrix[,2]/avg.int.c # Dangerous, logFC_weight value of 1 means no change
+  # weighted_logFC = round(abs(log2(foldChange))^logFC_weight)
+  # weighted_logFC = round(abs(patient_z_values_vector)^logFC_weight)
+  # metsInset=cbind(metsInset, "names"= metNames, "hmdb_set"= hmdb_set, "weighted_logFC"=weighted_logFC[index], "FC"=foldChange[index], "z-score"=patient_z_values_vector[names(metsInset)], "path"=paths)
+  metsInset=cbind(metsInset, 
+                  "names"= metNames, 
+                  "hmdb_set"= hmdb_set, 
+                  # "weighted_logFC"=weighted_logFC[index], 
+                  # "FC"=foldChange[index], 
+                  "z-score"=patient_z_values_vector[rownames(metsInset)], 
+                  "path"=paths)
+  
   # Discard double rows
   metsInset = unique(metsInset, drop=FALSE)
   # tmp = metsInset
   # rownames(tmp) = NULL
-  # print(tmp[,c("g_i","fc","z-score")])
+  # print(tmp[,c("weighted_logFC","FC","z-score")])
   
-  #   if (dim(metsInset)[1]>top) {
+  #   if (nrow(metsInset)>top) {
   # ############################################################################################
   #   # top 50 on p-value of set
-  #   ints = p_valuesAll[rownames(metsInset), ]
+  #   ints = av_int_and_z_values_matrix[rownames(metsInset), ]
   #   # p.value
   #   # ints.ord = ints[order(ints[,paste("p.value_P",patient,sep="")], decreasing=FALSE),]
   #   # Z-score
   #   ints.ord = ints[order(abs(ints[,paste("p.value_P",patient,sep="")]), decreasing=TRUE),]
-  #   ints.ord.top = ints.ord[1:top, -grep("p.value_", colnames(p_valuesAll), fixed=TRUE)]
+  #   ints.ord.top = ints.ord[1:top, -grep("p.value_", colnames(av_int_and_z_values_matrix), fixed=TRUE)]
   #   metsInset = metsInset[rownames(ints.ord.top),]
   # ############################################################################################
   #   }
   # inSetAboveThresh=length(which(metsInset[,"metsInset"]==1))
   # inSetBelowThresh=length(which(metsInset[,"metsInset"]==0))
   
-  # Replaces the two lines above, because all.mets.assi is not 0 / 1 anymore, but FALSE / TRUE, and it could be shorter
+  # Replaces the two lines above, because allMetsExcedingThres is not 0 / 1 anymore, but FALSE / TRUE, and it could be shorter
   # inSetAboveThresh=length(which(metsInset[,"metsInset"]==TRUE))
   # inSetBelowThresh=length(which(metsInset[,"metsInset"]==FALSE))
   inSetAboveThresh=sum(metsInset[,"InSetAboveThres"])
   inSetBelowThresh=sum(!metsInset[,"InSetAboveThres"])
   
-  # notInSetAboveThresh=length(which(all.mets.assi==1)) - inSetAboveThresh
-  # notInSetBelowThresh=length(which(all.mets.assi==0)) - inSetBelowThresh
+  # notInSetAboveThresh=length(which(allMetsExcedingThres==1)) - inSetAboveThresh
+  # notInSetBelowThresh=length(which(allMetsExcedingThres==0)) - inSetBelowThresh
   
-  # Replaces the two lines above, because all.mets.assi is not 0 / 1 anymore, but FALSE / TRUE, and it could be shorter
-  notInSetAboveThresh <- sum(all.mets.assi) - inSetAboveThresh
-  notInSetBelowThresh <- sum(all.mets.assi) - inSetBelowThresh
+  # Replaces the two lines above, because allMetsExcedingThres is not 0 / 1 anymore, but FALSE / TRUE, and it could be shorter
+  notInSetAboveThresh <- sum(allMetsExcedingThres) - inSetAboveThresh
+  notInSetBelowThresh <- sum(!allMetsExcedingThres) - inSetBelowThresh
   
   # message(paste(toString(gene_in), ", inSetAboveThresh: ", inSetAboveThresh, sep = ""))
   # message(paste(toString(gene_in), ", inSetBelowThresh: ", inSetBelowThresh, sep = ""))
@@ -217,7 +228,7 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
     enrichment =
       matrix(c(inSetAboveThresh, inSetBelowThresh, notInSetAboveThresh, notInSetBelowThresh),
              nrow = 2,
-             dimnames = list(c("above_thresh", "below_thresh"),c("in_set", "not_in_setn")))
+             dimnames = list(c("above_thresh", "below_thresh"),c("in_set", "not_in_set")))
     #   print(enrichment)
     #   print(fisher.test(enrichment, alternative = "greater"))
     retVal = fisher.test(enrichment, alternative = "greater")
@@ -259,17 +270,17 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
     # Number of mets in set
     n = inSetAboveThresh + inSetBelowThresh
     
-    if (n==0 | dim(metsInset)[1]==0){
+    if (n==0 | nrow(metsInset)==0){
       p=1
     } else {
       
-      Q = max(as.numeric(metsInset[,"g_i"]))
+      Q = max(as.numeric(metsInset[,"weighted_logFC"]))
       
       # Pseudoset
       pseudoSet = NULL
-      for (i in 1:dim(metsInset)[1]){
+      for (i in 1:nrow(metsInset)){
         name = rownames(metsInset)[i]
-        for (j in 1:as.numeric(metsInset[i,"g_i"])){
+        for (j in 1:as.numeric(metsInset[i,"weighted_logFC"])){
           pseudoSet = rbind(pseudoSet, metsInset[i,])
           rownames(pseudoSet)[dim(pseudoSet)[1]] = paste(name, j, sep="_")
         }
@@ -295,44 +306,58 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
     # Weighted Fishers exact test ############################################################
     ###########################################################################################
     
-    if (dim(metsInset)[1]==0){
+    # If no metabolites left (rows of metsInset), p value = 1
+    if (nrow(metsInset)==0){
       p=1
     } else {
       # Pseudoset
-      pseudoSet = NULL
-      for (i in 1:dim(metsInset)[1]){
-        name = rownames(metsInset)[i]
+      pseudoSet <- NULL
+      for (i in 1:nrow(metsInset)){
+        name <- rownames(metsInset)[i]
         
-        
-        #print(metsInset[i,"g_i"])  ## ME
-        
-        for (j in 1:as.numeric(metsInset[i,"g_i"])){
+        # To inflate the value of metabolites according to its intensity (small intensity elevation vs large elevation), 
+        # Metabolites are duplicated to be included multiple times in the fishers test on the basis of their fold change
+        # Possible problem: if the weighted logFC = 0, genes will also be present twice in the pseudoset.
+        # This method isn't used much... references date from 2015 and 2016
+        for (j in 1:as.numeric(metsInset[i,"weighted_logFC"])){
+          if (j == 0) next
           pseudoSet = rbind(pseudoSet, metsInset[i,])
-          rownames(pseudoSet)[dim(pseudoSet)[1]] = paste(name, j, sep="_")
+          rownames(pseudoSet)[nrow(pseudoSet)] = paste(name, j, sep="_")
         }
       }
-      index=as.vector(which(pseudoSet[,"g_i"]==0))
-      if (length(index)!=0) pseudoSet <- pseudoSet[-index,]
+      # index=as.vector(which(pseudoSet[,"weighted_logFC"]==0))
+      # if (length(index)!=0) pseudoSet <- pseudoSet[-index,]
       
-      # if (is.null(dim(pseudoSet))){
-      #   f = 1/top
-      #   
-      #   if (pseudoSet["metsInset"]==1) {
-      #     inSetAboveThresh=1
-      #     inSetBelowThresh=0
-      #   } else {
-      #     inSetAboveThresh=0
-      #     inSetBelowThresh=1
-      #   }
-      # } else {
-      #   f = dim(pseudoSet)[1]/top
-      #   
-      #   inSetAboveThresh=length(which(pseudoSet[,"metsInset"]==1))
-      #   inSetBelowThresh=length(which(pseudoSet[,"metsInset"]==0))
-      # }
-      # 
-      # notInSetAboveThresh=round(f*notInSetAboveThresh)
-      # notInSetBelowThresh=round(f*notInSetBelowThresh)
+      # if (is.null(nrow(pseudoSet))){
+        if (sum(pseudoSet$InSetAboveThres == 0)){
+          f = 1/top
+        
+        # f = 1/top
+
+        # This metsInset column or whatever was a vector of 1 and 0 for whether the metabolite was in the set
+        # if (pseudoSet["metsInset"]==1) {
+        #   inSetAboveThresh=1
+        #   inSetBelowThresh=0
+        # } else {
+        #   inSetAboveThresh=0
+        #   inSetBelowThresh=1
+        # }
+      } else {
+        f <- sum(pseudoSet$InSetAboveThres) / top
+        # f = nrow(pseudoSet)/top
+# 
+#         inSetAboveThresh=length(which(pseudoSet[,"metsInset"]==1))
+#         inSetBelowThresh=length(which(pseudoSet[,"metsInset"]==0))
+      }
+      
+  inSetAboveThresh <- sum(pseudoSet$InSetAboveThres)
+  inSetBelowThresh <- sum(!pseudoSet$InSetAboveThres)
+      # If there are few genes in the set, notInSetAboveThresh will be made smaller (f = genesInSet / top (=20))
+      # Thus: few genes in set --> inflate importance for those genes
+      # The effect of this method seems to be very small though. 
+      # On what basis would you determine what top should be?
+      notInSetAboveThresh=round(f*notInSetAboveThresh)
+      notInSetBelowThresh=round(f*notInSetBelowThresh)
       
       enrichment =
         matrix(c(inSetAboveThresh, inSetBelowThresh, notInSetAboveThresh, notInSetBelowThresh),
@@ -346,43 +371,48 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
       genExcelFileShort(as.data.frame(pseudoSet), paste(path, "/P", patient, "/Recon2/", gene_in,"_pseudo.xls",sep=""))
     }  
   }
-  tmp1=NULL
-  # index=which(as.numeric(metsInset[,"z-score"])<thresh_F_neg)
-  index=which(metsInset[,"z-score"]<thresh_F_neg) 
-  if (length(index)>0) tmp1=metsInset[index,,drop=FALSE]
-  tmp2=NULL
-  # index=which(as.numeric(metsInset[,"z-score"])>thresh_F_pos)
-  index=which(metsInset[,"z-score"]>thresh_F_pos)
-  if (length(index)>0) tmp2=metsInset[index,,drop=FALSE]
-  metsInset=rbind(tmp1,tmp2)
+  
+  # # Code for creating just the metsInset exceding the thresholds
+  # tmp1=NULL
+  # # index=which(as.numeric(metsInset[,"z-score"])<thresh_F_neg)
+  # index=which(metsInset[,"z-score"]<thresh_F_neg) 
+  # if (length(index)>0) tmp1=metsInset[index,,drop=FALSE]
+  # tmp2=NULL
+  # # index=which(as.numeric(metsInset[,"z-score"])>thresh_F_pos)
+  # index=which(metsInset[,"z-score"]>thresh_F_pos)
+  # if (length(index)>0) tmp2=metsInset[index,,drop=FALSE]
+  # metsInset=rbind(tmp1,tmp2)
+  
+  # This line replaces the chuck above this
+  metsInset <- metsInset[metsInset$InSetAboveThres,]
   
   # Changed name of p.value_ to z.average_
-  # ints = p_valuesAll[rownames(metsInset), -grep("p.value_", colnames(p_valuesAll), fixed=TRUE),drop=FALSE]
-  # p_values = p_valuesAll[rownames(metsInset), grep("p.value_", colnames(p_valuesAll), fixed=TRUE),drop=FALSE]
-  ints = p_valuesAll[rownames(metsInset), -grep("z.average_", colnames(p_valuesAll), fixed=TRUE),drop=FALSE]
-  p_values = p_valuesAll[rownames(metsInset), grep("z.average_", colnames(p_valuesAll), fixed=TRUE),drop=FALSE]
+  # ints = av_int_and_z_values_matrix[rownames(metsInset), -grep("p.value_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  # z_values = av_int_and_z_values_matrix[rownames(metsInset), grep("p.value_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  ints <- av_int_and_z_values_matrix[rownames(metsInset), -grep("z.average_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  z_values <- av_int_and_z_values_matrix[rownames(metsInset), grep("z.average_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
   
   rownames(ints) = metsInset[,"names"]
-  rownames(p_values) = metsInset[,"names"]
+  rownames(z_values) = metsInset[,"names"]
   
-  ints = ints[, -grep("avg.int.controls", colnames(ints), fixed=TRUE),drop=FALSE]
+  ints <- ints[, -grep("avg.int.controls", colnames(ints), fixed=TRUE),drop=FALSE]
   
   #   # Discard double rows
-  #   tmp = cbind(ints,p_values)
+  #   tmp = cbind(ints,z_values)
   #   tmp = unique(tmp, drop = FALSE)
   #
-  #   p_values = tmp[,dim(tmp)[2], drop = FALSE]
+  #   z_values = tmp[,dim(tmp)[2], drop = FALSE]
   #   ints = tmp[,-dim(tmp)[2], drop = FALSE]
   
   # Remove negative and NA values
-  ints[ints<0] = NA
-  ints[is.na(ints)] = 0
+  ints[ints<0] <- NA
+  ints[is.na(ints)] <- 0
   
   # Whole column zeros
-  remove = which(apply(ints, 2, sum)==0)
+  remove <- which(colSums(ints)==0)
   if (length(remove)>0) ints = ints[,-as.numeric(remove), drop=FALSE]
   
-  if (length(p_values) > 1) {
+  if (length(z_values) > 1) {
     # CairoPNG(filename=paste("./results/crossomics/", gene_in, "/Recon2/P", patient,".png",sep=""), width, height) #, width, height
     CairoPNG(filename=paste(path, "/P", patient, "/Recon2/", gene_in,".png",sep=""), width, height) #, width, height
     #    CairoPNG(filename=paste("./results/crossomics2/P1/Recon2/CBSnotinPAH.png",sep=""), width, height) #, width, height
@@ -400,15 +430,15 @@ performMSEA <- function(metaboliteSet, p_valuesAll, patient, gene_in, n_patients
     dev.off()
     
     ints = ints[hm$rowInd,hm$colInd]
-    labels = colnames(p_values)
-    p_values = as.data.frame(p_values[hm$rowInd,])
-    colnames(p_values)=labels
+    labels = colnames(z_values)
+    z_values = as.data.frame(z_values[hm$rowInd,])
+    colnames(z_values)=labels
     metsInset = metsInset[hm$rowInd,]
   }
   
   ints = data.frame("compound"=rownames(ints),
                     "HMDB_set"=metsInset[,"hmdb_set"], 
-                    "Z score" = as.numeric(p_values[,grep(colnames(p_values),pattern=toString(patient),fixed=TRUE)]),
+                    "Z score" = as.numeric(z_values[,grep(colnames(z_values),pattern=toString(patient),fixed=TRUE)]),
                     "path"=metsInset[,"path"],
                     "HMDB"=rownames(metsInset),
                     ints)
