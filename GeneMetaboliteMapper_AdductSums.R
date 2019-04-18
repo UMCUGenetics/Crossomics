@@ -50,6 +50,10 @@ cat(
 try(setwd("/Volumes/Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients"), silent = TRUE)
 
 
+# Test for getting the data from P01.1, having PKU
+patient_folder <- "/Volumes/Metab/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects/Projects 2017/Project 2017_008 MetabolomicsDiagnosis_DBS/RES_BSP_20170629_MetabolomicsDiagnosis_RUN0/Bioinformatics_metIS/"
+setwd(patient_folder)
+
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -58,7 +62,7 @@ try(setwd("/Volumes/Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/C
 
 # To what distance from the reaction should metabolites be considered?
 # distance_to_gene <- 1 # Staat nog niet aan, kijk naar het begin van de "then perform MSEA"
-patients=c(241)
+patients=c(221)
 
 
 
@@ -74,171 +78,185 @@ library("Cairo")
 library("XLConnect")
 library("BridgeDbR")
 
-source("./src/Crossomics/sourceDir.R")
-sourceDir("./src/Crossomics")
+# source("./src/Crossomics/sourceDir.R")
+# sourceDir("./src/Crossomics")
+source("/Users/mkerkho7/DIMS2_repo/Crossomics/Scripts/Supportive/sourceDir.R")
+sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/Scripts/Supportive")
+
+
+
+# The following code block is moved to Generate_av_Z_scores.R to create and save 1 excel file with all averaged Z scores of all patients.
+
+# # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# # Load DIMS data ----------------------------------------------------------
+# # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 
+# ## Load DIMS input files, don't know why this is necessary, but it gives a different result than just load()
+# loadRData <- function(fileName){
+#   load(fileName)
+#   get(ls()[ls() != "fileName"])
+# }
+# 
+# # Added:
+# # outlist.neg.stats.more <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_negative.RData")
+# # outlist.pos.stats.more <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_positive.RData")
+# # To get the adducts_summed data
+# outlist.neg.adducts.HMDB <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/adductSums_negative.RData")
+# outlist.pos.adducts.HMDB <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/adductSums_positive.RData")
+# 
+# # This is a check and ensures the column names are in the same order.
+# tmp <- intersect(colnames(outlist.neg.adducts.HMDB), colnames(outlist.pos.adducts.HMDB))
+# outlist.neg.adducts.HMDB <- outlist.neg.adducts.HMDB[,tmp]
+# outlist.pos.adducts.HMDB <- outlist.pos.adducts.HMDB[,tmp]
+# # outlist.neg.stats.more <- loadRData("Z:/Metabolomics/DIMS_pipeline/R_workspace_ME/HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_negative.RData")
+# # outlist.pos.stats.more <- loadRData("Z:/Metabolomics/DIMS_pipeline/R_workspace_ME/HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_positive.RData")
+# 
+# #WORKS outlist.neg.stats.more <- loadRData("Z:/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects/Projects 2015/Project 2015_011_SinglePatients/06 SinglePatients_VI/Bioinformatics 20180824/outlist_identified_negative.RData")
+# #WORKS outlist.pos.stats.more <- loadRData("Z:/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects/Projects 2015/Project 2015_011_SinglePatients/06 SinglePatients_VI/Bioinformatics 20180824/outlist_identified_positive.RData")
+# 
+# 
+# 
+# 
+# ########################################################################################################
+# ### Declare patient names 
+# #patients=c(80,82)
+# #controls=c(30:34,36:45)
+# # If WES data available genes=NULL, genes from WES in "./db/P28_HGNC.txt"
+# #genes=NULL
+# ########################################################################################################
+# 
+# #patients=c(82)
+# #controls=c(30:34,36:45)
+# #genes=NULL
+# 
+# # patients=c(221)
+# # ME: USE ALL CONTROLS in list!
+# # controls=c(63:65,69,73:77,79:81,83,88:89,96:99,102:104,107,109,111:112,114,117:118,120)
+# 
+# # Way of getting variable control numbers without specifically knowing the numbers beforehand
+# controls_list <- unique(strsplit(colnames(outlist.neg.adducts.HMDB)[grep("C", colnames(outlist.neg.adducts.HMDB))], "[C.]"))
+# for(i in c(1:length(controls_list))){
+#   if(i == 1){control_numbers <- as.integer(controls_list[[i]][2])}
+#   else{control_numbers <- c(control_numbers, as.integer(controls_list[[i]][2]))}
+# }
+# controls <- control_numbers[order(control_numbers)]
+# genes=NULL
+# 
+# 
+# n_patients=length(patients)
+# n_controls=length(controls)
+# 
+# 
+# 
+# 
+# ###############################################################################################
+# ################  Seperate modes only selected adducts ########################################
+# ###############################################################################################
+# 
+# 
+# # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# # Collate the positive and negative adducts data --------------------------
+# # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 
+# # Determine location of shared HMDBs in both matrices so they can be added together later
+# index.neg <- which(rownames(outlist.neg.adducts.HMDB) %in% rownames(outlist.pos.adducts.HMDB))
+# index.pos <- which(rownames(outlist.pos.adducts.HMDB) %in% rownames(outlist.neg.adducts.HMDB))
+# 
+# # First determine positive HMDBs mutual with negative, then their common names and then all other positive HMDBs
+# # Necessary to remove the common names from the shared matrix-rows as they can not be added together otherwise.
+# tmp.pos <- outlist.pos.adducts.HMDB[rownames(outlist.pos.adducts.HMDB)[index.pos], 1:(dim(outlist.pos.adducts.HMDB)[2]-1)]
+# tmp.hmdb_name.pos <- outlist.pos.adducts.HMDB[rownames(outlist.pos.adducts.HMDB)[index.pos], dim(outlist.pos.adducts.HMDB)[2]]
+# tmp.pos.left <- outlist.pos.adducts.HMDB[-index.pos,]
+# 
+# # First negative HMDBs, mutual with positive, then all other negative (names are already provided by positive)
+# tmp.neg <- outlist.neg.adducts.HMDB[rownames(outlist.pos.adducts.HMDB)[index.pos], 1:(dim(outlist.neg.adducts.HMDB)[2]-1)]
+# tmp.neg.left <- outlist.neg.adducts.HMDB[-index.neg,]
+# 
+# # Add together the shared HMDBs, paste the other HMDBs (still including common names) underneath
+# tmp <- apply(tmp.pos, 2,as.numeric) + apply(tmp.neg, 2,as.numeric)
+# rownames(tmp) <- rownames(tmp.pos)
+# tmp <- cbind(tmp, "HMDB_name"=tmp.hmdb_name.pos)
+# # adducts.neg.pos <- rbind(tmp, tmp.pos.left,tmp.neg.left) 
+# outlist.adducts.HMDB <- rbind(tmp, tmp.pos.left, tmp.neg.left) 
+# 
+# # dummy.neg <- rep(NA, dim(adducts.neg.pos)[1])
+# # outlist.adducts.HMDB <- cbind("mzmed.pgrp"=dummy.neg,
+# #                              "fq.best"=dummy.neg,
+# #                              "fq.worst"=dummy.neg,
+# #                              "nrsamples"=dummy.neg,
+# #                              "mzmin.pgrp"=dummy.neg,
+# #                              "mzmax.pgrp"=dummy.neg,
+# #                              adducts.neg.pos)
+# 
+# outlist.adducts.HMDB <- cbind(outlist.adducts.HMDB, "HMDB_code"=rownames(outlist.adducts.HMDB))
+# 
+# 
+# 
+# 
+# # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# # Get Z scores ------------------------------------------------------------
+# # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 
+# peaklist <- as.data.frame(outlist.adducts.HMDB)
+# 
+# # Determine which columns contain controls and which contain all intensity values
+# ctrl.cols <- grep("C", colnames(peaklist), fixed = TRUE)
+# int.cols <- c(ctrl.cols, grep("P", colnames(peaklist), fixed = TRUE))
+# 
+# # Some sort of check to include NA's in places where there is no value
+# # peaklist[,int.cols][peaklist[,int.cols]==0] <- NA
+# 
+# # calculate mean and sd for Control group
+# # tmp = data.matrix(peaklist[ , ctrl.cols], rownames.force = TRUE)
+# tmp <- outlist.adducts.HMDB[ , ctrl.cols]
+# peaklist$avg.ctrls <- apply(tmp, 1, function(x) mean(as.numeric(x),na.rm = TRUE))
+# peaklist$sd.ctrls <- apply(tmp, 1, function(x) sd(as.numeric(x),na.rm = TRUE))
+# 
+# cnames.z = NULL
+# 
+# # calculate the actual Z scores
+# for (i in int.cols) {
+#   cname <- colnames(peaklist)[i]
+#   cnames.z <- c(cnames.z, paste(cname, "Zscore", sep="_"))
+#   zscores.1col <- (as.numeric(as.vector(unlist(peaklist[ , i]))) - peaklist$avg.ctrls) / peaklist$sd.ctrls
+#   peaklist <- cbind(peaklist, zscores.1col)
+# }
+# 
+# # Correct the column names
+# colnames(peaklist)[grep("zscores.1col", colnames(peaklist))[1]:ncol(peaklist)] <- cnames.z
+# 
+# # Put columns in desired order (intensities and zscores last, all other info first)
+# peaklist <- peaklist[,c(grep("^[CP]\\d+", colnames(peaklist), value = TRUE, invert = TRUE),grep("^[CP]\\d+", colnames(peaklist), value = TRUE))]
+# 
+# 
+# 
+# 
+# # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# # Get mean Z-values for specific Patient ----------------------------------
+# # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 
+# adductsSummed <- TRUE
+# 
+# # Dit geeft geen p.values, maar de gemiddelde Z-score van de HMDB intensities van de patient. 
+# adductsHMDB_z_ave_and_int <- getPvalues(peaklist = peaklist, 
+#                                n_patients, 
+#                                n_controls, 
+#                                assi.lab = "HMDB_code",
+#                                patients,
+#                                controls,
+#                                adducts = FALSE)
+
+
+
+file <- "/Users/mkerkho7/DIMS2_repo/TestResults/20180720_Run4_Diagnosis2017_1_Adductsums_Zscores.rds"
+adductsHMDB_z_ave_and_int <- readRDS(file)
 
 
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Load DIMS data ----------------------------------------------------------
+# Perform MSEA ------------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-## Load DIMS input files, don't know why this is necessary, but it gives a different result than just load()
-loadRData <- function(fileName){
-  load(fileName)
-  get(ls()[ls() != "fileName"])
-}
-
-# Added:
-# outlist.neg.stats.more <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_negative.RData")
-# outlist.pos.stats.more <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_positive.RData")
-# To get the adducts_summed data
-outlist.neg.adducts.HMDB <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/adductSums_negative.RData")
-outlist.pos.adducts.HMDB <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/adductSums_positive.RData")
-
-# This is a check and ensures the column names are in the same order.
-tmp <- intersect(colnames(outlist.neg.adducts.HMDB), colnames(outlist.pos.adducts.HMDB))
-outlist.neg.adducts.HMDB <- outlist.neg.adducts.HMDB[,tmp]
-outlist.pos.adducts.HMDB <- outlist.pos.adducts.HMDB[,tmp]
-# outlist.neg.stats.more <- loadRData("Z:/Metabolomics/DIMS_pipeline/R_workspace_ME/HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_negative.RData")
-# outlist.pos.stats.more <- loadRData("Z:/Metabolomics/DIMS_pipeline/R_workspace_ME/HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_positive.RData")
-
-#WORKS outlist.neg.stats.more <- loadRData("Z:/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects/Projects 2015/Project 2015_011_SinglePatients/06 SinglePatients_VI/Bioinformatics 20180824/outlist_identified_negative.RData")
-#WORKS outlist.pos.stats.more <- loadRData("Z:/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects/Projects 2015/Project 2015_011_SinglePatients/06 SinglePatients_VI/Bioinformatics 20180824/outlist_identified_positive.RData")
-
-
-
-
-########################################################################################################
-### Declare patient names 
-#patients=c(80,82)
-#controls=c(30:34,36:45)
-# If WES data available genes=NULL, genes from WES in "./db/P28_HGNC.txt"
-#genes=NULL
-########################################################################################################
-
-#patients=c(82)
-#controls=c(30:34,36:45)
-#genes=NULL
-
-# patients=c(221)
-# ME: USE ALL CONTROLS in list!
-# controls=c(63:65,69,73:77,79:81,83,88:89,96:99,102:104,107,109,111:112,114,117:118,120)
-
-# Way of getting variable control numbers without specifically knowing the numbers beforehand
-controls_list <- unique(strsplit(colnames(outlist.neg.adducts.HMDB)[grep("C", colnames(outlist.neg.adducts.HMDB))], "[C.]"))
-for(i in c(1:length(controls_list))){
-  if(i == 1){control_numbers <- as.integer(controls_list[[i]][2])}
-  else{control_numbers <- c(control_numbers, as.integer(controls_list[[i]][2]))}
-}
-controls <- control_numbers[order(control_numbers)]
-genes=NULL
-
-
-n_patients=length(patients)
-n_controls=length(controls)
-
-
-
-
-###############################################################################################
-################  Seperate modes only selected adducts ########################################
-###############################################################################################
-
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Collate the positive and negative adducts data --------------------------
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-# Determine location of shared HMDBs in both matrices so they can be added together later
-index.neg <- which(rownames(outlist.neg.adducts.HMDB) %in% rownames(outlist.pos.adducts.HMDB))
-index.pos <- which(rownames(outlist.pos.adducts.HMDB) %in% rownames(outlist.neg.adducts.HMDB))
-
-# First determine positive HMDBs mutual with negative, then their common names and then all other positive HMDBs
-# Necessary to remove the common names from the shared matrix-rows as they can not be added together otherwise.
-tmp.pos <- outlist.pos.adducts.HMDB[rownames(outlist.pos.adducts.HMDB)[index.pos], 1:(dim(outlist.pos.adducts.HMDB)[2]-1)]
-tmp.hmdb_name.pos <- outlist.pos.adducts.HMDB[rownames(outlist.pos.adducts.HMDB)[index.pos], dim(outlist.pos.adducts.HMDB)[2]]
-tmp.pos.left <- outlist.pos.adducts.HMDB[-index.pos,]
-
-# First negative HMDBs, mutual with positive, then all other negative (names are already provided by positive)
-tmp.neg <- outlist.neg.adducts.HMDB[rownames(outlist.pos.adducts.HMDB)[index.pos], 1:(dim(outlist.neg.adducts.HMDB)[2]-1)]
-tmp.neg.left <- outlist.neg.adducts.HMDB[-index.neg,]
-
-# Add together the shared HMDBs, paste the other HMDBs (still including common names) underneath
-tmp <- apply(tmp.pos, 2,as.numeric) + apply(tmp.neg, 2,as.numeric)
-rownames(tmp) <- rownames(tmp.pos)
-tmp <- cbind(tmp, "HMDB_name"=tmp.hmdb_name.pos)
-# adducts.neg.pos <- rbind(tmp, tmp.pos.left,tmp.neg.left) 
-outlist.adducts.HMDB <- rbind(tmp, tmp.pos.left, tmp.neg.left) 
-
-# dummy.neg <- rep(NA, dim(adducts.neg.pos)[1])
-# outlist.adducts.HMDB <- cbind("mzmed.pgrp"=dummy.neg,
-#                              "fq.best"=dummy.neg,
-#                              "fq.worst"=dummy.neg,
-#                              "nrsamples"=dummy.neg,
-#                              "mzmin.pgrp"=dummy.neg,
-#                              "mzmax.pgrp"=dummy.neg,
-#                              adducts.neg.pos)
-
-outlist.adducts.HMDB <- cbind(outlist.adducts.HMDB, "HMDB_code"=rownames(outlist.adducts.HMDB))
-
-
-
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Get Z scores ------------------------------------------------------------
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-peaklist <- as.data.frame(outlist.adducts.HMDB)
-
-# Determine which columns contain controls and which contain all intensity values
-ctrl.cols <- grep("C", colnames(peaklist), fixed = TRUE)
-int.cols <- c(ctrl.cols, grep("P", colnames(peaklist), fixed = TRUE))
-
-# Some sort of check to include NA's in places where there is no value
-# peaklist[,int.cols][peaklist[,int.cols]==0] <- NA
-
-# calculate mean and sd for Control group
-# tmp = data.matrix(peaklist[ , ctrl.cols], rownames.force = TRUE)
-tmp <- outlist.adducts.HMDB[ , ctrl.cols]
-peaklist$avg.ctrls <- apply(tmp, 1, function(x) mean(as.numeric(x),na.rm = TRUE))
-peaklist$sd.ctrls <- apply(tmp, 1, function(x) sd(as.numeric(x),na.rm = TRUE))
-
-cnames.z = NULL
-
-# calculate the actual Z scores
-for (i in int.cols) {
-  cname <- colnames(peaklist)[i]
-  cnames.z <- c(cnames.z, paste(cname, "Zscore", sep="_"))
-  zscores.1col <- (as.numeric(as.vector(unlist(peaklist[ , i]))) - peaklist$avg.ctrls) / peaklist$sd.ctrls
-  peaklist <- cbind(peaklist, zscores.1col)
-}
-
-# Correct the column names
-colnames(peaklist)[grep("zscores.1col", colnames(peaklist))[1]:ncol(peaklist)] <- cnames.z
-
-# Put columns in desired order (intensities and zscores last, all other info first)
-peaklist <- peaklist[,c(grep("^[CP]\\d+", colnames(peaklist), value = TRUE, invert = TRUE),grep("^[CP]\\d+", colnames(peaklist), value = TRUE))]
-
-
-
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Get mean Z-values for specific Patient ----------------------------------
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-adductsSummed <- TRUE
-
-# Dit geeft geen p.values, maar de gemiddelde Z-score van de HMDB intensities van de patient. 
-adductsHMDB_z_ave_and_int <- getPvalues(peaklist = peaklist, 
-                               n_patients, 
-                               n_controls, 
-                               assi.lab = "HMDB_code",
-                               patients,
-                               controls,
-                               adducts = FALSE)
-
 
 
 
@@ -373,7 +391,7 @@ adductsHMDB_z_ave_and_int <- getPvalues(peaklist = peaklist,
 # ###############################################################################################
 
 # dir.create("./results", showWarnings = FALSE)
-path <- "./results/crossomics_Fisher_weighted"
+# path <- "./results/crossomics_Fisher_weighted"
 path <- "/Users/mkerkho7/DIMS2_repo/TestResults/"
 # dir.create(path, showWarnings = FALSE)
 thresh_F_pos <- 1.5
@@ -381,6 +399,7 @@ thresh_F_neg <- -1
 top <- 20
 # id="InChI_key"
 id <- "hmdb"
+genes <- NULL
 
 ###############################################################################################
 # adductsSummed=FALSE!!!!!!!!!!
@@ -453,6 +472,7 @@ for (i in 1:length(patients)){
   metSetResult = NULL
   nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
   for (j in 1:length(mss)){
+    print(mss[j])
     # Skip the gene if there is no metabolite pathway data available, elsewise, load its file
     if (!file.exists(paste(path2, mss[j], sep="/"))) next
     
@@ -529,9 +549,12 @@ for (i in 1:length(patients)){
     
     # Get the total number of unique metabolites for all genes in one vector
     # nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
-    # Improved check for same compounds, including if either chebi, kegg or hmdb have duplicated values
-    # nMets <- c(nMets, sum(apply(!apply(metaboliteSet[,c("hmdb","chebi")], 2, duplicated, incomparables = NA), 1, all)))
-    nMets <- c(nMets, sum(apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = NA), 1, all)))
+    # Improved check for same compounds, including if either chebi, kegg or hmdb have duplicated values. Return number of metabolites
+    # nMets <- c(nMets, sum(apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = NA), 1, all)))
+    
+    # Remove duplicate metabolites (added by Marten)
+    metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = NA), 1, all),, drop = FALSE]
+    nMets <- nrow(metaboliteSet)
     
     savepoint_p.values <- p.values
     savepoint_metaboliteSet <- metaboliteSet
@@ -539,16 +562,16 @@ for (i in 1:length(patients)){
     
     
     # Peform MSEA, one single patient and rare-gene variant at a time
-    # 3 = Fisher weighted
-    retVal = performMSEA(metaboliteSet = metaboliteSet, 
-                         p_valuesAll = p.values, 
+    # 1 = Fishers exact; 3 = Fisher weighted
+    retVal = performMSEA(metaboliteSet = savepoint_metaboliteSet, 
+                         av_int_and_z_values_matrix = savepoint_p.values, 
                          patient = patients[i], 
                          gene_in, 
                          n_patients, 
                          thresh_F_pos, 
                          thresh_F_neg, 
                          path, 
-                         test = 3, 
+                         test = 1, 
                          top, 
                          id, 
                          adductsSummed = FALSE
@@ -582,488 +605,3 @@ for (i in 1:length(patients)){
 }
 # if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
 Sys.time()
-
-
-### End of Pipeline for WES #####
-
-
-
-
-
-
-
-
-
-# 
-# 
-# ########################################################################
-# ########################################################################
-# ########################################################################
-# path="./results/crossomics_Fisher_Weighted"
-# # dir.create(path, showWarnings = FALSE)
-# overview = NULL
-# 
-# for (i in 1:length(patients)){
-#   
-#   ######################## MSEA Revon2 neighbourhood ######################################################
-#   # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
-#   # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
-#   
-#   # message(paste("Patient", patients[i]))
-#   
-#   # subset to 1 patient!
-#   p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
-#                                 grep("C", colnames(p.values.assi.all), fixed=TRUE),
-#                                 which(colnames(p.values.assi.all)=="avg.int.controls"))] 
-#   
-#   load(paste0("./results/mss_",genes[i][[1]][1],i,".RData"))
-#   
-#   metSetResult = NULL
-#   nMets = NULL
-#   
-#   #   for (j in 1:dim(gene_map_table)[1]){
-#   for (j in 1:length(mss)){
-#     
-#     if (!file.exists(paste(path2, mss[j], sep="/"))) next
-#     
-#     load(paste(path2, mss[j], sep="/"))
-#     gene_in=strsplit(mss[j], split = "." , fixed=TRUE)[[1]][1]
-#     
-#     # A lot of missing HMDB identifiers!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#     # metaboliteSet = retVal$mets
-#     if (step==2){
-#       metaboliteSet = result_mets_2
-#     } else if (step==1){
-#       metaboliteSet = result_mets_1
-#     } else if (step==3){
-#       metaboliteSet = result_mets_3
-#     } else {
-#       metaboliteSet = result_mets_0
-#     }
-#     
-#     if (!is.null(metaboliteSet)){
-#       if (is.null(dim(metaboliteSet))){
-#         metaboliteSet=data.frame(t(metaboliteSet))
-#       }
-#     }  
-#     
-#     ##################################################
-#     # temporarily work around to be fixed in findMetabolicEnvironment
-#     index = which(is.na(metaboliteSet[,"hmdb"]))
-#     if (length(index)>0) metaboliteSet[index,"hmdb"] = "character(0)"
-#     ##################################################
-#     
-#     ########### Recon 2.0 ############################
-#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-#     
-#     # pressent in BridgeDB?
-#     index.sub = which(metaboliteSet[index,"kegg"] != "character(0)")  # ME filter metaboliteSet for empty Kegg 
-#     kegg_id = metaboliteSet[index[index.sub],"kegg"] # ME get kegg_id's for metaboliteSet
-#     
-#     mapper = loadDatabase("./db/BridgeDB/metabolites_20150717.bridge")
-#     hmdb = getSystemCode("HMDB")  
-#     kegg = getSystemCode("KEGG Compound") 
-#     
-#     if (length(kegg_id)>0){
-#       for (k in 1:length(kegg_id)){
-#         if (!is.null(unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]) 
-#       }
-#     }  
-#     
-#     index = which(metaboliteSet[,"hmdb"] == "character(0)")
-#     index.sub = which(metaboliteSet[index,"chebi"] != "character(0)")
-#     chebi_id = metaboliteSet[index[index.sub],"chebi"]
-#     
-#     chebi = getSystemCode("ChEBI")# ME system code for chebi ??
-#     
-#     if (length(chebi_id)>0){
-#       for (k in 1:length(chebi_id)){
-#         if (!is.null(unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]) 
-#       }
-#     }
-#     
-#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-#     if (length(index)>0) metaboliteSet = metaboliteSet[-index,,drop=FALSE]
-#     #######################################################
-#     
-#     #     ########### Recon 2.2 ############################
-#     #     inchi = metaboliteSet[,"InChI_key"]
-#     #     chebi_id = metaboliteSet[,"chebi"]
-#     #     index=which((is.na(chebi_id)&is.na(inchi)))
-#     #     if (length(index)>0){
-#     #       metaboliteSet = metaboliteSet[-index,]
-#     #     }
-#     #     #######################################################
-#     
-#     # Add glycine and carnitine conjugates to CoA compounds
-#     #addConjugates(metaboliteSet)
-#     
-#     #     if (!is.null(metaboliteSet) && (dim(metaboliteSet)[1]!=0)){
-#     #       if (is.null(dim(metaboliteSet))){
-#     #         metaboliteSet=data.frame(t(metaboliteSet))
-#     #       }
-#     
-#     # nMets=c(nMets, dim(metaboliteSet)[1])
-#     nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
-#     # message(paste("gene: ", gene_in))
-#     # message(paste("metaboliteSet: ", dim(metaboliteSet)[1]))
-#     
-#     #     Warning messages:
-#     #       1: In data.row.names(row.names, rowsi, i) :
-#     #       some row.names duplicated: 6 --> row.names NOT used
-#     #     2: In data.row.names(row.names, rowsi, i) :
-#     #       some row.names duplicated: 17 --> row.names NOT used
-#     
-#     
-#     # which(is.na(p.values[1,]))
-#     
-#     retVal = performMSEA(metaboliteSet, p.values, patients[i], gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, 3, top, id, adductsSummed)
-#     
-#     p_value = as.numeric(retVal$p.value)
-#     if (length(p_value)==0){
-#       p_value=NA
-#     }
-#     
-#     metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste("P", patients[i], sep=""), "metabolite.set"=gene_in))
-#     
-#   }
-#   
-#   tmp=data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-#   # genExcelFileShort(tmp[order(as.numeric(tmp[,"p.value"])),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
-#   
-#   if (!is.null(genes)){
-#     tmp1 = tmp[order(tmp[,"p.value"]),]
-#     
-#     dummy = c(NA,0,0)
-#     for (l in 1:(100-dim(tmp)[1])){
-#       tmp1 = rbind(tmp1,dummy) 
-#     }
-#     
-#     overview = rbind(overview, t(tmp1))
-#   }
-#   
-#   # # rank
-#   # index.rank = min(which(tmp2[1,]%in%unlist(genes[i])))
-#   # rank = rank + index.rank 
-#   # p_value_sum = p_value_sum + as.numeric(tmp2[2,index.rank]) 
-#   ##########################################################################################################
-# }
-# # if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
-# # rank = rank/length(patients)
-# # save(rank, p_value_sum, file=paste(path,"/rank.RData",sep=""))
-# Sys.time()
-# 
-# ########################################################################
-# ########################################################################
-# ########################################################################
-# path="./results/crossomics_Hyper"
-# # dir.create(path, showWarnings = FALSE)
-# overview = NULL
-# 
-# for (i in 1:length(patients)){
-#   
-#   ######################## MSEA Revon2 neighbourhood ######################################################
-#   # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
-#   # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
-#   
-#   # message(paste("Patient", patients[i]))
-#   
-#   # subset to 1 patient!
-#   p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
-#                                 grep("C", colnames(p.values.assi.all), fixed=TRUE),
-#                                 which(colnames(p.values.assi.all)=="avg.int.controls"))] 
-#   
-#   load(paste0("./results/mss_",genes[i],i,".RData"))
-#   
-#   metSetResult = NULL
-#   nMets = NULL
-#   
-#   #   for (j in 1:dim(gene_map_table)[1]){
-#   for (j in 1:length(mss)){
-#     
-#     if (!file.exists(paste(path2, mss[j], sep="/"))) next
-#     
-#     load(paste(path2, mss[j], sep="/"))
-#     gene_in=strsplit(mss[j], split = "." , fixed=TRUE)[[1]][1]
-#     
-#     # A lot of missing HMDB identifiers!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#     # metaboliteSet = retVal$mets
-#     if (step==2){
-#       metaboliteSet = result_mets_2
-#     } else if (step==1){
-#       metaboliteSet = result_mets_1
-#     } else if (step==3){
-#       metaboliteSet = result_mets_3
-#     } else {
-#       metaboliteSet = result_mets_0
-#     }
-#     
-#     if (!is.null(metaboliteSet)){
-#       if (is.null(dim(metaboliteSet))){
-#         metaboliteSet=data.frame(t(metaboliteSet))
-#       }
-#     }  
-#     
-#     ##################################################
-#     # temporarily work around to be fixed in findMetabolicEnvironment
-#     index = which(is.na(metaboliteSet[,"hmdb"]))
-#     if (length(index)>0) metaboliteSet[index,"hmdb"] = "character(0)"
-#     ##################################################
-#     
-#     ########### Recon 2.0 ############################
-#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-#     
-#     # pressent in BridgeDB?
-#     index.sub = which(metaboliteSet[index,"kegg"] != "character(0)")
-#     kegg_id = metaboliteSet[index[index.sub],"kegg"]
-#     
-#     mapper = loadDatabase("./db/BridgeDB/metabolites_20150717.bridge")
-#     hmdb = getSystemCode("HMDB")
-#     kegg = getSystemCode("KEGG Compound")
-#     
-#     if (length(kegg_id)>0){
-#       for (k in 1:length(kegg_id)){
-#         if (!is.null(unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]) 
-#       }
-#     }  
-#     
-#     index = which(metaboliteSet[,"hmdb"] == "character(0)")
-#     index.sub = which(metaboliteSet[index,"chebi"] != "character(0)")
-#     chebi_id = metaboliteSet[index[index.sub],"chebi"]
-#     
-#     chebi = getSystemCode("ChEBI")
-#     
-#     if (length(chebi_id)>0){
-#       for (k in 1:length(chebi_id)){
-#         if (!is.null(unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]) 
-#       }
-#     }
-#     
-#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-#     if (length(index)>0) metaboliteSet = metaboliteSet[-index,,drop=FALSE]
-#     #######################################################
-#     
-#     #     ########### Recon 2.2 ############################
-#     #     inchi = metaboliteSet[,"InChI_key"]
-#     #     chebi_id = metaboliteSet[,"chebi"]
-#     #     index=which((is.na(chebi_id)&is.na(inchi)))
-#     #     if (length(index)>0){
-#     #       metaboliteSet = metaboliteSet[-index,]
-#     #     }
-#     #     #######################################################
-#     
-#     # Add glycine and carnitine conjugates to CoA compounds
-#     #addConjugates(metaboliteSet)
-#     
-#     #     if (!is.null(metaboliteSet) && (dim(metaboliteSet)[1]!=0)){
-#     #       if (is.null(dim(metaboliteSet))){
-#     #         metaboliteSet=data.frame(t(metaboliteSet))
-#     #       }
-#     
-#     # nMets=c(nMets, dim(metaboliteSet)[1])
-#     nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
-#     # message(paste("gene: ", gene_in))
-#     # message(paste("metaboliteSet: ", dim(metaboliteSet)[1]))
-#     
-#     #     Warning messages:
-#     #       1: In data.row.names(row.names, rowsi, i) :
-#     #       some row.names duplicated: 6 --> row.names NOT used
-#     #     2: In data.row.names(row.names, rowsi, i) :
-#     #       some row.names duplicated: 17 --> row.names NOT used
-#     
-#     
-#     # which(is.na(p.values[1,]))
-#     
-#     retVal = performMSEAenv(metaboliteSet, p.values, patients[i], gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, 1, top, id, adductsSummed)
-#     
-#     p_value = as.numeric(retVal$p.value)
-#     if (length(p_value)==0){
-#       p_value=NA
-#     }
-#     
-#     metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste("P", patients[i], sep=""), "metabolite.set"=gene_in))
-#     
-#   }
-#   
-#   tmp=data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-#   # genExcelFileShort(tmp[order(as.numeric(tmp[,"p.value"])),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
-#   
-#   if (!is.null(genes)){
-#     tmp1 = tmp[order(tmp[,"p.value"]),]
-#     
-#     dummy = c(NA,0,0)
-#     for (l in 1:(100-dim(tmp)[1])){
-#       tmp1 = rbind(tmp1,dummy) 
-#     }
-#     
-#     overview = rbind(overview, t(tmp1))
-#   }
-#   
-#   # # rank
-#   # index.rank = min(which(tmp2[1,]%in%unlist(genes[i])))
-#   # rank = rank + index.rank 
-#   # p_value_sum = p_value_sum + as.numeric(tmp2[2,index.rank]) 
-#   ##########################################################################################################
-# }
-# # if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
-# # rank = rank/length(patients)
-# # save(rank, p_value_sum, file=paste(path,"/rank.RData",sep=""))
-# Sys.time()
-# 
-# ########################################################################
-# ########################################################################
-# ########################################################################
-# path="./results/crossomics_Hyper_Weighted"
-# # dir.create(path, showWarnings = FALSE)
-# overview = NULL
-# 
-# for (i in 1:length(patients)){
-#   
-#   ######################## MSEA Revon2 neighbourhood ######################################################
-#   # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
-#   # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
-#   
-#   # message(paste("Patient", patients[i]))
-#   
-#   # subset to 1 patient!
-#   p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
-#                                 grep("C", colnames(p.values.assi.all), fixed=TRUE),
-#                                 which(colnames(p.values.assi.all)=="avg.int.controls"))] 
-#   
-#   load(paste0("./results/mss_",genes[i],i,".RData"))
-#   
-#   metSetResult = NULL
-#   nMets = NULL
-#   
-#   #   for (j in 1:dim(gene_map_table)[1]){
-#   for (j in 1:length(mss)){
-#     
-#     if (!file.exists(paste(path2, mss[j], sep="/"))) next
-#     
-#     load(paste(path2, mss[j], sep="/"))
-#     gene_in=strsplit(mss[j], split = "." , fixed=TRUE)[[1]][1]
-#     
-#     # A lot of missing HMDB identifiers!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#     # metaboliteSet = retVal$mets
-#     if (step==2){
-#       metaboliteSet = result_mets_2
-#     } else if (step==1){
-#       metaboliteSet = result_mets_1
-#     } else if (step==3){
-#       metaboliteSet = result_mets_3
-#     } else {
-#       metaboliteSet = result_mets_0
-#     }
-#     
-#     if (!is.null(metaboliteSet)){
-#       if (is.null(dim(metaboliteSet))){
-#         metaboliteSet=data.frame(t(metaboliteSet))
-#       }
-#     }  
-#     
-#     ##################################################
-#     # temporarily work around to be fixed in findMetabolicEnvironment
-#     index = which(is.na(metaboliteSet[,"hmdb"]))
-#     if (length(index)>0) metaboliteSet[index,"hmdb"] = "character(0)"
-#     ##################################################
-#     
-#     ########### Recon 2.0 ############################
-#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-#     
-#     # pressent in BridgeDB?
-#     index.sub = which(metaboliteSet[index,"kegg"] != "character(0)")
-#     kegg_id = metaboliteSet[index[index.sub],"kegg"]
-#     
-#     mapper = loadDatabase("./db/BridgeDB/metabolites_20150717.bridge")
-#     hmdb = getSystemCode("HMDB")
-#     kegg = getSystemCode("KEGG Compound")
-#     
-#     if (length(kegg_id)>0){
-#       for (k in 1:length(kegg_id)){
-#         if (!is.null(unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]) 
-#       }
-#     }  
-#     
-#     index = which(metaboliteSet[,"hmdb"] == "character(0)")
-#     index.sub = which(metaboliteSet[index,"chebi"] != "character(0)")
-#     chebi_id = metaboliteSet[index[index.sub],"chebi"]
-#     
-#     chebi = getSystemCode("ChEBI")
-#     
-#     if (length(chebi_id)>0){
-#       for (k in 1:length(chebi_id)){
-#         if (!is.null(unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]) 
-#       }
-#     }
-#     
-#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-#     if (length(index)>0) metaboliteSet = metaboliteSet[-index,,drop=FALSE]
-#     #######################################################
-#     
-#     #     ########### Recon 2.2 ############################
-#     #     inchi = metaboliteSet[,"InChI_key"]
-#     #     chebi_id = metaboliteSet[,"chebi"]
-#     #     index=which((is.na(chebi_id)&is.na(inchi)))
-#     #     if (length(index)>0){
-#     #       metaboliteSet = metaboliteSet[-index,]
-#     #     }
-#     #     #######################################################
-#     
-#     # Add glycine and carnitine conjugates to CoA compounds
-#     #addConjugates(metaboliteSet)
-#     
-#     #     if (!is.null(metaboliteSet) && (dim(metaboliteSet)[1]!=0)){
-#     #       if (is.null(dim(metaboliteSet))){
-#     #         metaboliteSet=data.frame(t(metaboliteSet))
-#     #       }
-#     
-#     # nMets=c(nMets, dim(metaboliteSet)[1])
-#     nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
-#     # message(paste("gene: ", gene_in))
-#     # message(paste("metaboliteSet: ", dim(metaboliteSet)[1]))
-#     
-#     #     Warning messages:
-#     #       1: In data.row.names(row.names, rowsi, i) :
-#     #       some row.names duplicated: 6 --> row.names NOT used
-#     #     2: In data.row.names(row.names, rowsi, i) :
-#     #       some row.names duplicated: 17 --> row.names NOT used
-#     
-#     
-#     # which(is.na(p.values[1,]))
-#     
-#     retVal = performMSEAenv(metaboliteSet, p.values, patients[i], gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, 2, top, id, adductsSummed)
-#     
-#     p_value = as.numeric(retVal$p.value)
-#     if (length(p_value)==0){
-#       p_value=NA
-#     }
-#     
-#     metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste("P", patients[i], sep=""), "metabolite.set"=gene_in))
-#     
-#   }
-#   
-#   tmp=data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-#   # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
-#   
-#   if (!is.null(genes)){
-#     tmp1 = tmp[order(tmp[,"p.value"]),]
-#     
-#     dummy = c(NA,0,0)
-#     for (l in 1:(100-dim(tmp)[1])){
-#       tmp1 = rbind(tmp1,dummy) 
-#     }
-#     
-#     overview = rbind(overview, t(tmp1))
-#   }
-#   
-#   # # rank
-#   # index.rank = min(which(tmp2[1,]%in%unlist(genes[i])))
-#   # rank = rank + index.rank 
-#   # p_value_sum = p_value_sum + as.numeric(tmp2[2,index.rank]) 
-#   ##########################################################################################################
-# }
-# # if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
-# # rank = rank/length(patients)
-# # save(rank, p_value_sum, file=paste(path,"/rank.RData",sep=""))
-# Sys.time()
-# 
