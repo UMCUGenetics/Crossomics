@@ -5,7 +5,7 @@
 cat(
   "
   Created by:   Marten Kerkhofs, 2019-04-11
-  Modified by:  Marten Kerkhofs, 2019-04-11
+  Modified by:  Marten Kerkhofs, 2019-04-18
 
   Copied from 'GeneMetaboliteMapper_Marten_Adductsums.R, on 2019-04-11 which in turn was copied from similarly named files:
   'GeneMetaboliteMapper_ME.R' in the Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients/src folder
@@ -35,7 +35,7 @@ cat(
   metabolite data from a patient: adductSums_xx.RData (xx = negative or positive) files
   
   Output
-  Complete adductsums file, including all Z scores and intensities.
+  Complete adductsums file, including all Z scores and intensities in an RDS file (single r data file).
   "
 )
 
@@ -52,17 +52,6 @@ try(setwd("/Volumes/Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/C
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Libraries ---------------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-# library("R.matlab")
-# library("KEGGREST")
-# library("bioDist")
-# library("Cairo")
-# library("XLConnect")
-# library("BridgeDbR")
-
-# Look at Y: (Metab) drive
-# source("./src/Crossomics/sourceDir.R")
-# sourceDir("./src/Crossomics")
 
 source("/Users/mkerkho7/DIMS2_repo/Crossomics/Scripts/Supportive/getZvalues_11042019.R")
 
@@ -83,8 +72,14 @@ loadRData <- function(fileName){
 # outlist.neg.stats.more <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_negative.RData")
 # outlist.pos.stats.more <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/outlist_identified_positive.RData")
 # To get the adducts_summed data
-outlist.neg.adducts.HMDB <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/adductSums_negative.RData")
-outlist.pos.adducts.HMDB <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/adductSums_positive.RData")
+# outlist.neg.adducts.HMDB <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/adductSums_negative.RData")
+# outlist.pos.adducts.HMDB <- loadRData("../../HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/adductSums_positive.RData")
+
+# project_folder <- "/Volumes/Metab/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects/Projects 2015/Project 2015_011_SinglePatients/17 SinglePatients_XVII/Bioinformatics/"
+project_folder <- "/Volumes/Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/HPCxls/results_RES_DBS_20180720_Run4_Diagnosis2017_1/"
+outlist.neg.adducts.HMDB <- loadRData(paste0(project_folder,"adductSums_negative.RData"))
+outlist.pos.adducts.HMDB <- loadRData(paste0(project_folder,"adductSums_positive.RData"))
+
 
 # This is a check and ensures the column names are in the same order.
 tmp <- intersect(colnames(outlist.neg.adducts.HMDB), colnames(outlist.pos.adducts.HMDB))
@@ -107,9 +102,13 @@ for(i in c(1:length(controls_list))){
 }
 controls <- control_numbers[order(control_numbers)]
 patients_list <- unique(strsplit(colnames(outlist.neg.adducts.HMDB)[grep("P", colnames(outlist.neg.adducts.HMDB))], "[P.]"))
+patients_numbers <- NULL
 for(i in c(1:length(patients_list))){
-  if(i == 1){patients_numbers <- as.integer(patients_list[[i]][2])}
-  else{patients_numbers <- c(patients_numbers, as.integer(patients_list[[i]][2]))}
+  if(patients_list[[i]][1] != "") next
+  # if(i == 1){patients_numbers <- as.integer(patients_list[[i]][2])}
+  # else{patients_numbers <- c(patients_numbers, as.integer(patients_list[[i]][2]))}
+  if(!is.null(patients_numbers)) patients_numbers <- c(patients_numbers, as.integer(patients_list[[i]][2]))
+  else patients_numbers <- as.integer(patients_list[[i]][2])
 }
 patients <- patients_numbers[order(patients_numbers)]
 genes=NULL
@@ -148,6 +147,9 @@ outlist.adducts.HMDB <- rbind(tmp, tmp.pos.left, tmp.neg.left)
 
 outlist.adducts.HMDB <- cbind(outlist.adducts.HMDB, "HMDB_code"=rownames(outlist.adducts.HMDB))
 
+# Additional filter for samples that do not follow the name format of C... or P... OR starting with HMDB
+outlist.adducts.HMDB <- outlist.adducts.HMDB[,grep(c("^[PC]\\d+\\.\\d|^HMDB"), colnames(outlist.adducts.HMDB))]
+
 
 
 
@@ -159,7 +161,8 @@ peaklist <- as.data.frame(outlist.adducts.HMDB)
 
 # Determine which columns contain controls and which contain all intensity values
 ctrl.cols <- grep("C", colnames(peaklist), fixed = TRUE)
-int.cols <- c(ctrl.cols, grep("P", colnames(peaklist), fixed = TRUE))
+int.cols <- c(ctrl.cols, grep("^P", colnames(peaklist)))
+# int.cols <- c(ctrl.cols, grep("P", colnames(peaklist), fixed = TRUE))
 
 # Some sort of check to include NA's in places where there is no value
 # peaklist[,int.cols][peaklist[,int.cols]==0] <- NA
@@ -200,9 +203,11 @@ adductsHMDB_z_ave_and_int <- getZvalues(peaklist = peaklist,
                                         )
 
 path <- "/Users/mkerkho7/DIMS2_repo/TestResults/"
-filelist <- "metabolites"
-wb <- loadWorkbook(paste(path,"20180720_Run4_Diagnosis2017_1_Adductsums_Zscores.xls",sep=""), create = TRUE)
-createSheet(wb, name = filelist)
-writeWorksheet(wb, adductsHMDB_z_ave_and_int, sheet = filelist)
-saveWorkbook(wb)
-rm(wb)
+# filelist <- "metabolites"
+# wb <- loadWorkbook(paste(path,"20180720_Run4_Diagnosis2017_1_Adductsums_Zscores.xls",sep=""), create = TRUE)
+# createSheet(wb, name = filelist)
+# writeWorksheet(wb, adductsHMDB_z_ave_and_int, sheet = filelist)
+# saveWorkbook(wb)
+# rm(wb)
+
+saveRDS(object = adductsHMDB_z_ave_and_int, file = paste(path,"20180720_Run4_Diagnosis2017_1_Adductsums_Zscores.rds",sep=""))
