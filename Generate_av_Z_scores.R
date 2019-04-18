@@ -4,6 +4,9 @@
 
 cat(
   "
+  This file has been made a function with the same name
+  
+  
   Created by:   Marten Kerkhofs, 2019-04-11
   Modified by:  Marten Kerkhofs, 2019-04-18
 
