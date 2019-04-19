@@ -45,7 +45,7 @@
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Load DIMS data ----------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-function(){
+generate_av_Z_scores <- function(patient){
   ## Load DIMS input files, don't know why this is necessary, but it gives a different result than just load()
   loadRData <- function(fileName){
     load(fileName)
@@ -69,19 +69,21 @@ function(){
     else{control_numbers <- c(control_numbers, as.integer(controls_list[[i]][2]))}
   }
   controls <- control_numbers[order(control_numbers)]
-  patients_list <- unique(strsplit(colnames(outlist.neg.adducts.HMDB)[grep("P", colnames(outlist.neg.adducts.HMDB))], "[P.]"))
-  patients_numbers <- NULL
-  for(i in c(1:length(patients_list))){
-    if(patients_list[[i]][1] != "") next
-    # if(i == 1){patients_numbers <- as.integer(patients_list[[i]][2])}
-    # else{patients_numbers <- c(patients_numbers, as.integer(patients_list[[i]][2]))}
-    if(!is.null(patients_numbers)) patients_numbers <- c(patients_numbers, as.integer(patients_list[[i]][2]))
-    else patients_numbers <- as.integer(patients_list[[i]][2])
-  }
-  patients <- unique(patients_numbers[order(patients_numbers)])
+  
+  # Used to get all patients in the data, but we supply a single patient at a time now.
+  # patients_list <- unique(strsplit(colnames(outlist.neg.adducts.HMDB)[grep("P", colnames(outlist.neg.adducts.HMDB))], "[P.]"))
+  # patients_numbers <- NULL
+  # for(i in c(1:length(patients_list))){
+  #   if(patients_list[[i]][1] != "") next
+  #   # if(i == 1){patients_numbers <- as.integer(patients_list[[i]][2])}
+  #   # else{patients_numbers <- c(patients_numbers, as.integer(patients_list[[i]][2]))}
+  #   if(!is.null(patients_numbers)) patients_numbers <- c(patients_numbers, as.integer(patients_list[[i]][2]))
+  #   else patients_numbers <- as.integer(patients_list[[i]][2])
+  # }
+  # patients <- unique(patients_numbers[order(patients_numbers)])
   genes=NULL
   
-  
+  patients <- patient
   n_patients=length(patients)
   n_controls=length(controls)
   
@@ -113,10 +115,14 @@ function(){
   # adducts.neg.pos <- rbind(tmp, tmp.pos.left,tmp.neg.left) 
   outlist.adducts.HMDB <- rbind(tmp, tmp.pos.left, tmp.neg.left) 
   
+  # Only take the controls and the specific patient
+  patterns <- c("^C\\d+\\.\\d","^HMDB",paste0("^P",patient))
+  outlist.adducts.HMDB <- outlist.adducts.HMDB[,grep(paste(patterns, collapse = "|"), colnames(outlist.adducts.HMDB))]
+  
   outlist.adducts.HMDB <- cbind(outlist.adducts.HMDB, "HMDB_code"=rownames(outlist.adducts.HMDB))
   
   # Additional filter for samples that do not follow the name format of C... or P... OR starting with HMDB
-  outlist.adducts.HMDB <- outlist.adducts.HMDB[,grep(c("^[PC]\\d+\\.\\d|^HMDB"), colnames(outlist.adducts.HMDB))]
+  # outlist.adducts.HMDB <- outlist.adducts.HMDB[,grep(c("^[PC]\\d+\\.\\d|^HMDB"), colnames(outlist.adducts.HMDB))]
   
   
   
@@ -158,7 +164,7 @@ function(){
   peaklist <- peaklist[,c(grep("^[CP]\\d+", colnames(peaklist), value = TRUE, invert = TRUE),grep("^[CP]\\d+", colnames(peaklist), value = TRUE))]
   
   
-  peaklist_save <- peaklist
+  # peaklist_save <- peaklist
   
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   # Get mean Z-values for specific Patient ----------------------------------
