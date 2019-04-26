@@ -14,7 +14,8 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   # logFC_weight=3
   logFC_weight=1.2
   
-  label=paste("z.average_P",patient,sep = "")
+  # label=paste("z.average_P",patient,sep = "")
+  label <- paste0("av.z_", patient)
   # label=paste("p.value_P",patient,sep = "")
   patient_z_values_vector = av_int_and_z_values_matrix[,label]
   
@@ -22,8 +23,8 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   patient_z_values_vector = patient_z_values_vector[!is.na(patient_z_values_vector)]
   
   # average of the control intensity values and paste it to the end of the previous matrix
-  avg.int.c = apply(av_int_and_z_values_matrix[,grep("C", colnames(av_int_and_z_values_matrix), fixed = TRUE)], 1, mean)
-  av_int_and_z_values_matrix = cbind(av_int_and_z_values_matrix,"avg.int.controls"=avg.int.c) 
+  avg.int.c <- apply(av_int_and_z_values_matrix[,grep("C", colnames(av_int_and_z_values_matrix), fixed = TRUE)], 1, mean)
+  av_int_and_z_values_matrix <- cbind(av_int_and_z_values_matrix,"avg.int.controls"=avg.int.c) 
   
   # Z-scores that exceed the positive/negative threshold
   # allMetsExcedingThres.pos = as.integer(patient_z_values_vector > thresh_F_pos)
@@ -389,8 +390,11 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   # Changed name of p.value_ to z.average_
   # ints = av_int_and_z_values_matrix[rownames(metsInset), -grep("p.value_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
   # z_values = av_int_and_z_values_matrix[rownames(metsInset), grep("p.value_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
-  ints <- av_int_and_z_values_matrix[rownames(metsInset), -grep("z.average_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
-  z_values <- av_int_and_z_values_matrix[rownames(metsInset), grep("z.average_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  # ints <- av_int_and_z_values_matrix[rownames(metsInset), -grep("z.average_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  # z_values <- av_int_and_z_values_matrix[rownames(metsInset), grep("z.average_", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  ints <- av_int_and_z_values_matrix[rownames(metsInset), -grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  z_values <- av_int_and_z_values_matrix[rownames(metsInset), grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  
   
   rownames(ints) = metsInset[,"names"]
   rownames(z_values) = metsInset[,"names"]
@@ -446,8 +450,8 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   ints=ints[order(ints[,"Z.score"]),]
   
   # genExcelFileShort(as.data.frame(ints), paste("./results/crossomics/", gene_in, "/Recon2/P", patient,".xls",sep=""))
-  genExcelFileShort(as.data.frame(ints), paste(path, "/P", patient, "/Recon2/", gene_in,".xls",sep=""))
-  
+  # genExcelFileShort(as.data.frame(ints), paste(path, "/P", patient, "/Recon2/", gene_in,".xls",sep=""))
+  genExcelFileShort(as.data.frame(ints), paste(path, "/", patient, "/Recon2/", gene_in,".xls",sep=""))
   
   return(list("p.value"=p))
   #     

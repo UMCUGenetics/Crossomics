@@ -55,20 +55,32 @@ generate_av_Z_scores <- function(patient){
   outlist.neg.adducts.HMDB <- loadRData("./adductSums_negative.RData")
   outlist.pos.adducts.HMDB <- loadRData("./adductSums_positive.RData")
   
-  
   # This is a check and ensures the column names are in the same order.
   tmp <- intersect(colnames(outlist.neg.adducts.HMDB), colnames(outlist.pos.adducts.HMDB))
   outlist.neg.adducts.HMDB <- outlist.neg.adducts.HMDB[,tmp]
   outlist.pos.adducts.HMDB <- outlist.pos.adducts.HMDB[,tmp]
+  
+  # Make all column names follow the same structure: [C or P] followed by [AT LEAST two digits] followed by [.x]
+  colname_list <- strsplit(grep("^[CP]", colnames(outlist.neg.adducts.HMDB), value = TRUE), "(?=[CP\\.])", perl = TRUE)
+  for (i in 1:length(colname_list)){
+    colname_list[[i]][2] <- str_pad(colname_list[[i]][2], 2, pad = "0")
+    colname_list[[i]] <- paste(colname_list[[i]], collapse = "")
+  }
+  colnames(outlist.neg.adducts.HMDB) <- c(unlist(colname_list), colnames(outlist.neg.adducts.HMDB)[length(colnames(outlist.neg.adducts.HMDB))])
+  colnames(outlist.pos.adducts.HMDB) <- colnames(outlist.neg.adducts.HMDB)
+  
  
   
   # Way of getting variable control numbers without specifically knowing the numbers beforehand
-  controls_list <- unique(strsplit(colnames(outlist.neg.adducts.HMDB)[grep("C", colnames(outlist.neg.adducts.HMDB))], "[C.]"))
-  for(i in c(1:length(controls_list))){
-    if(i == 1){control_numbers <- as.integer(controls_list[[i]][2])}
-    else{control_numbers <- c(control_numbers, as.integer(controls_list[[i]][2]))}
-  }
-  controls <- control_numbers[order(control_numbers)]
+  # controls_list <- unique(strsplit(colnames(outlist.neg.adducts.HMDB)[grep("C", colnames(outlist.neg.adducts.HMDB))], "[C.]"))
+  # for(i in c(1:length(controls_list))){
+  #   if(i == 1){control_numbers <- as.integer(controls_list[[i]][2])}
+  #   else{control_numbers <- c(control_numbers, as.integer(controls_list[[i]][2]))}
+  # }
+  # controls <- control_numbers[order(control_numbers)]
+  
+  controls_list <- unique(strsplit(colnames(outlist.neg.adducts.HMDB)[grep("C", colnames(outlist.neg.adducts.HMDB))], "[.]"))
+  controls <- unlist(lapply(controls_list, `[[`, 1))
   
   # Used to get all patients in the data, but we supply a single patient at a time now.
   # patients_list <- unique(strsplit(colnames(outlist.neg.adducts.HMDB)[grep("P", colnames(outlist.neg.adducts.HMDB))], "[P.]"))
@@ -116,7 +128,8 @@ generate_av_Z_scores <- function(patient){
   outlist.adducts.HMDB <- rbind(tmp, tmp.pos.left, tmp.neg.left) 
   
   # Only take the controls and the specific patient
-  patterns <- c("^C\\d+\\.\\d","^HMDB",paste0("^P",patient))
+  # patterns <- c("^C\\d+\\.\\d","^HMDB",paste0("^P",patient)) # Before I added P to the input 'patient'
+  patterns <- c("^C\\d+\\.\\d","^HMDB",paste0("^",patient))
   outlist.adducts.HMDB <- outlist.adducts.HMDB[,grep(paste(patterns, collapse = "|"), colnames(outlist.adducts.HMDB))]
   
   outlist.adducts.HMDB <- cbind(outlist.adducts.HMDB, "HMDB_code"=rownames(outlist.adducts.HMDB))

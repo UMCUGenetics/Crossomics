@@ -42,28 +42,6 @@ cat(
   "
 )
 
-# wet working directory for Marten's mac:
-# try(setwd("/Volumes/DATA/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients"), silent = TRUE)
-# try(setwd("/Volumes/DATA-1/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients"), silent = TRUE)
-# try(setwd("/Volumes/DATA-2/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients"), silent = TRUE)
-# try(setwd("/Volumes/DATA-3/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients"), silent = TRUE)
-try(setwd("/Volumes/Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients"), silent = TRUE)
-
-
-# Test for getting the data from P01.1, having PKU
-patient_folder <- "/Volumes/Metab/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects/Projects 2017/Project 2017_008 MetabolomicsDiagnosis_DBS/RES_BSP_20170629_MetabolomicsDiagnosis_RUN0/Bioinformatics_metIS/"
-setwd(patient_folder)
-
-
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Manual input ------------------------------------------------------------
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-# To what distance from the reaction should metabolites be considered?
-# distance_to_gene <- 1 # Staat nog niet aan, kijk naar het begin van de "then perform MSEA"
-patients=c(20)
-
 
 
 
@@ -77,6 +55,7 @@ library("bioDist")
 library("Cairo")
 library("XLConnect")
 library("BridgeDbR")
+library("stringr") # add leading 0's
 
 # source("./src/Crossomics/sourceDir.R")
 # sourceDir("./src/Crossomics")
@@ -85,8 +64,72 @@ sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/Scripts/Supportive")
 
 
 
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Manual inputs -----------------------------------------------------------
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# To what distance from the reaction should metabolites be considered? (0 to 4)
+distance_to_gene <- 1 
+
+# Save mock gene set?
+save_mock <- TRUE
+
+
+
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Set working directory ---------------------------------------------------
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+try(setwd("/Volumes/Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients"), silent = TRUE)
+
+# Test for getting the data from P01.1, having PKU
+# patient_folder <- "/Volumes/Metab/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects/Projects 2017/Project 2017_008 MetabolomicsDiagnosis_DBS/RES_BSP_20170629_MetabolomicsDiagnosis_RUN0/Bioinformatics_metIS/"
+# setwd(patient_folder)
+
+patient_file <- "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/Crossomics_DBS_Marten_Training.xlsx"
+wb = loadWorkbook(patient_file, create = TRUE)
+data = readWorksheet(wb, sheet = 1, startRow = 0, endRow = 0, startCol = 0, endCol = 0)
+
+
+
+# Get the correct data location on the basis of the patient number alone. 
+patients <- 6
+# Get correct dataset if patient is present in multiple (choose 0 or 1)
+run <- 0
+
+# Search for patient number with and without leading 0 (when patientnumber is single digid)
+if (nchar(patients) == 1){
+  dummy_patient_number <- c(paste0("P", patients,"\\."), paste0("P0", patients,"\\."))
+} else {
+  dummy_patient_number <- paste0("P",patients)
+}
+
+patient_rows <- grep(paste(dummy_patient_number, collapse = "|"), data$Patient.number)
+patient_datasets <- unique(data$Dataset[patient_rows])
+
+# Get the correct dataset name and location
+if(length(patient_datasets) > 1){
+  patient_datasets <- patient_datasets[grep(paste0("RUN", run), patient_datasets)]
+}
+
+data_location <- data$Location[match(patient_datasets, data$Dataset)]
+
+# Get disease gene for patient
+dis_gene <- unique(data$Gene[grepl(paste(dummy_patient_number, collapse = "|"), data$Patient.number) & data$Location == data_location])
+
+# Make dataset location mac-compatible
+data_location <- gsub("Y:", "/Volumes/Metab", data_location)
+data_location <- gsub("\\", "/", data_location, fixed = TRUE)
+
+setwd(data_location)
+
+
 # The following code block is moved to Generate_av_Z_scores.R to create and save 1 excel file with all averaged Z scores of all patients.
-patient <- patients[1]
+# patient <- patients[1]
+# Make sure to get a patient with at least 2 digits (incl leading 0 if necessary)
+patient <- paste0("P", str_pad(patients, width = 2, pad = "0"))
 adductsHMDB_z_ave_and_int <- generate_av_Z_scores(patient = patient)
 
 
@@ -112,15 +155,26 @@ top <- 20
 id <- "hmdb"
 genes <- NULL
 
+# For getting random mock genes
+mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+mock_genes <- mock_genes$Gene.name
+genes <- sample(mock_genes, size = 100)
+genes <- c(genes, dis_gene)
+
+
+
+
 
 # Then performe MSEA ######################################################################################
 
-path2 <- "../Crossomics_Build_Metabolite_Set/results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_1"
+# path2 <- "../Crossomics_Build_Metabolite_Set/results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_1"
 # path2 = paste0("../Crossomics_Build_Metabolite_Set/results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_",distance_to_gene)
-step <- 1 # 1:3  # ME wordt gebruikt in regel 495 -503, waarom?
-path_wg <- "./results/mss_WG_step_0" # for sampling random genes   #ME enkel voor random data set, niet WES
-sets <- list.files(path = path2)
-overview <- NULL # ME ?
+path2 <- paste0("/Volumes/Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_Build_Metabolite_Set/results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_", distance_to_gene)
+# step <- 1 # 1:3  # ME wordt gebruikt in regel 495 -503, waarom?
+step <- distance_to_gene
+# path_wg <- "./results/mss_WG_step_0" # for sampling random genes   #ME enkel voor random data set, niet WES
+# sets <- list.files(path = path2)
+overview <- NULL # at the end
 
 
 ###########################################################################################################
@@ -131,13 +185,21 @@ p.values.assi.all <- adductsHMDB_z_ave_and_int
 for (i in 1:length(patients)){
   
   ######################## MSEA Revon2 neighbourhood ######################################################
-  dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
-  dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
+  # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
+  # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
+  dir.create(paste(path,"/",patient[i], sep=""), showWarnings = FALSE)
+  dir.create(paste(path,"/",patient[i],"/Recon2", sep=""), showWarnings = FALSE)
+  
+  # save mock genes + real gene
+  if(save_mock) write.table(genes, file = paste0(path, "/", patient[i], "/Recon2/genes_used.txt"), row.names = FALSE, col.names = FALSE)
   
   # subset to 1 patient!
-  p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
-                                grep("C", colnames(p.values.assi.all), fixed=TRUE),
-                                which(colnames(p.values.assi.all)=="avg.int.controls"))]
+  # p.values <- p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
+  #                               grep("C", colnames(p.values.assi.all), fixed=TRUE),
+  #                               which(colnames(p.values.assi.all)=="avg.int.controls"))]
+  p.values <- p.values.assi.all[,c(grep(patient[i], colnames(p.values.assi.all), fixed=TRUE),
+                                   grep("C", colnames(p.values.assi.all), fixed=TRUE),
+                                   which(colnames(p.values.assi.all)=="avg.int.controls"))]
   
   if (is.null(genes)){
     mss = read.table(paste("./db/P",patients[i],"_HGNC.txt",sep=""), header = FALSE, sep="\t")
@@ -147,19 +209,22 @@ for (i in 1:length(patients)){
     # gene_map_table = getBM(attributes=c('hgnc_symbol', 'entrezgene', 'ensembl_gene_id'),
     #                        filters = 'hgnc_symbol', values = as.vector(unlist(gene_list)), mart = ensembl)
     
+    # when mock genes are supplied / WES data unavailable
   } else {
-    genespp=as.vector(unlist(genes[i]))
+    genespp <- genes
+    # genespp=as.vector(unlist(genes[i])) # old
     
     mss = NULL
-    for (j in 1:length(genespp)){
-      mss = c(mss, paste(genespp[j],"RData",sep="."))
+    for (k in 1:length(genespp)){
+      mss = c(mss, paste(genespp[k],"RData",sep="."))
+      # print(mss)
     }
     
-    wg = list.files(path = path_wg)
-    mss = c(mss, wg[sample(1:length(wg), 100-length(genespp), replace=TRUE)])
+    # wg = list.files(path = path_wg)
+    # mss = c(mss, wg[sample(1:length(wg), 100-length(genespp), replace=TRUE)]) # Why with replacement? 
     
-    selection = which(sets %in% mss)
-    mss = sets[selection]
+    # selection = which(sets %in% mss)
+    # mss = sets[selection]
     
     # save(mss, file = paste0("./results/mss_",genes[i][[1]][1],i,".RData"))
   }
@@ -167,7 +232,7 @@ for (i in 1:length(patients)){
   metSetResult = NULL
   nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
   for (j in 1:length(mss)){
-    print(mss[j])
+    # print(mss[j])
     # Skip the gene if there is no metabolite pathway data available, elsewise, load its file
     if (!file.exists(paste(path2, mss[j], sep="/"))) next
     
@@ -185,10 +250,12 @@ for (i in 1:length(patients)){
       metaboliteSet = result_mets_0
     }
     
+
+    
     # Don't know why this is necessary, metaboliteSet should have content at this point
     if (!is.null(metaboliteSet)){
       if (is.null(dim(metaboliteSet))){
-        metaboliteSet=data.frame(t(metaboliteSet))  # ME matrix transpose
+        metaboliteSet <- data.frame(t(metaboliteSet), stringsAsFactors = FALSE)  # ME matrix transpose
       }
     }
     
@@ -200,6 +267,9 @@ for (i in 1:length(patients)){
     
     # Set all NA's to "character (0)" in the ID columns
     metaboliteSet[,c("hmdb","kegg","chebi")][is.na(metaboliteSet[,c("hmdb","kegg","chebi")])] <- "character(0)"
+    
+    # Check for when genes have no metaboliteSet info, continue with next gene
+    if (all(metaboliteSet[,c("hmdb","kegg","chebi")] == "character(0)")) next
 
     ##################################################
     
@@ -248,7 +318,9 @@ for (i in 1:length(patients)){
     # nMets <- c(nMets, sum(apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = NA), 1, all)))
     
     # Remove duplicate metabolites (added by Marten)
-    metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = NA), 1, all),, drop = FALSE]
+    if(nrow(metaboliteSet) >1){
+      metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = c("character(0)", NA)), 1, all),, drop = FALSE]
+    }
     nMets <- nrow(metaboliteSet)
     
     savepoint_p.values <- p.values
@@ -258,9 +330,10 @@ for (i in 1:length(patients)){
     
     # Peform MSEA, one single patient and rare-gene variant at a time
     # 1 = Fishers exact; 3 = Fisher weighted
+    # Top stands for the top genes to perform the statistical test with, this is to normalise the different metabolite set-sizes
     retVal = performMSEA(metaboliteSet = savepoint_metaboliteSet, 
                          av_int_and_z_values_matrix = savepoint_p.values, 
-                         patient = patients[i], 
+                         patient = patient[i], 
                          gene_in, 
                          n_patients, 
                          thresh_F_pos, 
@@ -269,8 +342,9 @@ for (i in 1:length(patients)){
                          test = 1, 
                          top, 
                          id, 
-                         adductsSummed = FALSE
+                         # adductsSummed = FALSE
     )
+    print(mss[j])
     
     # Get only the p.value and put all p.values with the patient and gene in one table
     print(retVal)
@@ -284,7 +358,8 @@ for (i in 1:length(patients)){
   
   # Create a short excel file with the p.values and the number of metabolites associated with a gene
   tmp <- data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-  genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
+  genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/",patient[i],"/Recon2/MSEA_results.xls",sep=""))
+  # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
   
   if (!is.null(genes)){
     tmp1 = tmp[order(tmp[,"p.value"]),]
