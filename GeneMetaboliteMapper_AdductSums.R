@@ -5,7 +5,7 @@
 cat(
   "
   Created by:   Marcel Willemse?
-  Modified by:  Marten Kerkhofs, 2019-04-19
+  Modified by:  Marten Kerkhofs, 2019-04-26
 
   Copied from 'GeneMetaboliteMapper_ME_Marten.R, on 29/03/2019 which in turn was copied from:
   'GeneMetaboliteMapper_ME.R' in the Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients/src folder
@@ -18,24 +18,29 @@ cat(
   Package versions:
   R version   3.5.1 (2018-07-02)
   
-  bioDist       1.54.0
+  stringr       1.4.0
   Cairo         1.5-9
   XLConnect     0.2-15
   BridgeDbR     1.16.1
   rJava         0.9-10
   XLConnectJars 0.2-15
+  bioDist       1.54.0
   KernSmooth    2.23-15
+  Biobase       2.42.0
   BiocGenerics  0.28.0
   
   
   USE:
   This file takes a patient's metabolite and rare-gene variant data and performs metabolite set enrichment analysis
+  OR
+  This file takes a patient without WES data and creates a mock-gene set + diseased gene to perform metabolite set enrichment analysis
   
   Input:
   Varying functions in the src folder
   metabolite data from a patient: adductSums_xx.RData (xx = negative or positive) files
   A gene set of a single patient which contains rare-gene variants in that patient
   A patient number
+  ...
   
   Output
 
@@ -70,10 +75,22 @@ sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/Scripts/Supportive")
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # To what distance from the reaction should metabolites be considered? (0 to 4)
-distance_to_gene <- 1 
+distance_to_gene <- 1
 
 # Save mock gene set?
 save_mock <- TRUE
+
+# Get the correct data location on the basis of the patient number alone. 
+patients <- 26
+
+# Get correct dataset if patient is present in multiple (choose 0 or 1)(ignore when there is only 1 run present)
+run <- 1
+
+# Make the sampling of random genes repeatable
+seed <- 313
+
+# Number of mock genes to add
+nr_mocks <- 100
 
 
 
@@ -92,12 +109,6 @@ patient_file <- "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/Crossomics_DBS_Marte
 wb = loadWorkbook(patient_file, create = TRUE)
 data = readWorksheet(wb, sheet = 1, startRow = 0, endRow = 0, startCol = 0, endCol = 0)
 
-
-
-# Get the correct data location on the basis of the patient number alone. 
-patients <- 6
-# Get correct dataset if patient is present in multiple (choose 0 or 1)
-run <- 0
 
 # Search for patient number with and without leading 0 (when patientnumber is single digid)
 if (nchar(patients) == 1){
@@ -126,13 +137,16 @@ data_location <- gsub("\\", "/", data_location, fixed = TRUE)
 setwd(data_location)
 
 
-# The following code block is moved to Generate_av_Z_scores.R to create and save 1 excel file with all averaged Z scores of all patients.
+
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Calculate Z scores ------------------------------------------------------
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 # patient <- patients[1]
 # Make sure to get a patient with at least 2 digits (incl leading 0 if necessary)
 patient <- paste0("P", str_pad(patients, width = 2, pad = "0"))
 adductsHMDB_z_ave_and_int <- generate_av_Z_scores(patient = patient)
-
-
 
 # file <- "/Users/mkerkho7/DIMS2_repo/TestResults/20180720_Run4_Diagnosis2017_1_Adductsums_Zscores.rds"
 # adductsHMDB_z_ave_and_int <- readRDS(file)
@@ -158,7 +172,11 @@ genes <- NULL
 # For getting random mock genes
 mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 mock_genes <- mock_genes$Gene.name
-genes <- sample(mock_genes, size = 100)
+
+# make sure that the disease gene isn't included twice by removing it from the mock_genes list
+mock_genes <- mock_genes[mock_genes != dis_gene]
+set.seed(seed = seed)
+genes <- sample(mock_genes, size = nr_mocks)
 genes <- c(genes, dis_gene)
 
 
@@ -184,14 +202,20 @@ Sys.time()
 p.values.assi.all <- adductsHMDB_z_ave_and_int
 for (i in 1:length(patients)){
   
+  patient_folder <- paste(patient[i], patient_datasets, "dis", distance_to_gene, sep = "_")
+  
   ######################## MSEA Revon2 neighbourhood ######################################################
   # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
   # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
-  dir.create(paste(path,"/",patient[i], sep=""), showWarnings = FALSE)
-  dir.create(paste(path,"/",patient[i],"/Recon2", sep=""), showWarnings = FALSE)
+  # dir.create(paste(path,"/",patient[i], sep=""), showWarnings = FALSE)
+  # dir.create(paste(path,"/",patient[i],"/Recon2", sep=""), showWarnings = FALSE)
+  dir.create(paste(path,"/",patient_folder, sep=""), showWarnings = FALSE)
+  # dir.create(paste(path,"/",patient_folder,"/Recon2", sep=""), showWarnings = FALSE)
   
   # save mock genes + real gene
-  if(save_mock) write.table(genes, file = paste0(path, "/", patient[i], "/Recon2/genes_used.txt"), row.names = FALSE, col.names = FALSE)
+  # if(save_mock) write.table(genes, file = paste0(path, "/", patient[i], "/Recon2/genes_used.txt"), row.names = FALSE, col.names = FALSE)
+  # if(save_mock) write.table(genes, file = paste0(path, "/", patient_folder, "/Recon2/genes_used.txt"), row.names = FALSE, col.names = FALSE)
+  if(save_mock) write.table(genes, file = paste0(path, "/", patient_folder, "/genes_used.txt"), row.names = FALSE, col.names = FALSE)
   
   # subset to 1 patient!
   # p.values <- p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
@@ -321,7 +345,7 @@ for (i in 1:length(patients)){
     if(nrow(metaboliteSet) >1){
       metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = c("character(0)", NA)), 1, all),, drop = FALSE]
     }
-    nMets <- nrow(metaboliteSet)
+    nMets <- c(nMets,nrow(metaboliteSet))
     
     savepoint_p.values <- p.values
     savepoint_metaboliteSet <- metaboliteSet
@@ -342,7 +366,7 @@ for (i in 1:length(patients)){
                          test = 1, 
                          top, 
                          id, 
-                         # adductsSummed = FALSE
+                         patient_folder = patient_folder
     )
     print(mss[j])
     
@@ -358,8 +382,10 @@ for (i in 1:length(patients)){
   
   # Create a short excel file with the p.values and the number of metabolites associated with a gene
   tmp <- data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-  genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/",patient[i],"/Recon2/MSEA_results.xls",sep=""))
+  # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/",patient[i],"/Recon2/MSEA_results.xls",sep=""))
   # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
+  # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/",patient_folder,"/Recon2/MSEA_results.xls",sep=""))
+  genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/",patient_folder,"/MSEA_results.xls",sep=""))
   
   if (!is.null(genes)){
     tmp1 = tmp[order(tmp[,"p.value"]),]

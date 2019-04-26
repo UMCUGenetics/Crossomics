@@ -1,4 +1,4 @@
-performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, test, top = 20, id="hmdb", adductsSummed=FALSE){
+performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, test, top = 20, id="hmdb", patient_folder){
   # av_int_and_z_values_matrix=patient_z_values_vector
   # patient=patients[i]
   # test=3
@@ -369,7 +369,9 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
       retVal = fisher.test(enrichment, alternative = "greater")
       p = retVal$p.value
       
-      genExcelFileShort(as.data.frame(pseudoSet), paste(path, "/P", patient, "/Recon2/", gene_in,"_pseudo.xls",sep=""))
+      # genExcelFileShort(as.data.frame(pseudoSet), paste(path, "/P", patient, "/Recon2/", gene_in,"_pseudo.xls",sep=""))
+      # genExcelFileShort(as.data.frame(pseudoSet), paste(path, "/", patient_folder, "/Recon2/", gene_in,"_pseudo.xls",sep=""))
+      genExcelFileShort(as.data.frame(pseudoSet), paste(path, "/", patient_folder, "/", gene_in,"_pseudo.xls",sep=""))
     }  
   }
   
@@ -418,7 +420,9 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   
   if (length(z_values) > 1) {
     # CairoPNG(filename=paste("./results/crossomics/", gene_in, "/Recon2/P", patient,".png",sep=""), width, height) #, width, height
-    CairoPNG(filename=paste(path, "/P", patient, "/Recon2/", gene_in,".png",sep=""), width, height) #, width, height
+    # CairoPNG(filename=paste(path, "/P", patient, "/Recon2/", gene_in,".png",sep=""), width, height) #, width, height
+    # CairoPNG(filename=paste(path, "/", patient_folder, "/Recon2/", gene_in,".png",sep=""), width, height)
+    CairoPNG(filename=paste(path, "/", patient_folder, "/", gene_in,".png",sep=""), width, height)
     #    CairoPNG(filename=paste("./results/crossomics2/P1/Recon2/CBSnotinPAH.png",sep=""), width, height) #, width, height
     
     # colnames(ints)[1] = "P22"
@@ -451,7 +455,9 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   
   # genExcelFileShort(as.data.frame(ints), paste("./results/crossomics/", gene_in, "/Recon2/P", patient,".xls",sep=""))
   # genExcelFileShort(as.data.frame(ints), paste(path, "/P", patient, "/Recon2/", gene_in,".xls",sep=""))
-  genExcelFileShort(as.data.frame(ints), paste(path, "/", patient, "/Recon2/", gene_in,".xls",sep=""))
+  # genExcelFileShort(as.data.frame(ints), paste(path, "/", patient, "/Recon2/", gene_in,".xls",sep=""))
+  # genExcelFileShort(as.data.frame(ints), paste(path, "/", patient_folder, "/Recon2/", gene_in,".xls",sep=""))
+  genExcelFileShort(as.data.frame(ints), paste(path, "/", patient_folder, "/", gene_in,".xls",sep=""))
   
   return(list("p.value"=p))
   #     
