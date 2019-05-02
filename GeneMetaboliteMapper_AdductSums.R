@@ -69,22 +69,24 @@ sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/Scripts/Supportive")
 
 
 
+# for(distance in 0:3){
+  
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Manual inputs -----------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# To what distance from the reaction should metabolites be considered? (0 to 4)
-distance_to_gene <- 1
+# To what distance from the reaction should metabolites be considered? (0 to 3)
+distance_to_gene <- distance
 
 # Save mock gene set?
 save_mock <- TRUE
 
 # Get the correct data location on the basis of the patient number alone. 
-patients <- 26
+patients <- 2
 
 # Get correct dataset if patient is present in multiple (choose 0 or 1)(ignore when there is only 1 run present)
-run <- 1
+run <- 0
 
 # Make the sampling of random genes repeatable
 seed <- 313
@@ -170,7 +172,15 @@ id <- "hmdb"
 genes <- NULL
 
 # For getting random mock genes
-mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+# mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl_apr_2019_GRCh38p12.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+mock_genes <- mock_genes[mock_genes$Gene.type == "protein_coding",]
+mock_genes <- mock_genes[!mock_genes$HGNC.ID == "",]
+mock_genes <- mock_genes[!duplicated(mock_genes$Gene.name),]
+mock_genes <- mock_genes[!grepl("orf", mock_genes$Gene.name),]
+
+
+
 mock_genes <- mock_genes$Gene.name
 
 # make sure that the disease gene isn't included twice by removing it from the mock_genes list
@@ -183,7 +193,7 @@ genes <- c(genes, dis_gene)
 
 
 
-# Then performe MSEA ######################################################################################
+# Then perform MSEA ######################################################################################
 
 # path2 <- "../Crossomics_Build_Metabolite_Set/results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_1"
 # path2 = paste0("../Crossomics_Build_Metabolite_Set/results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_",distance_to_gene)
@@ -331,6 +341,9 @@ for (i in 1:length(patients)){
       }
     }
     
+    # replace 'new' hmdb code-format with old ones (remove two zero's)
+    metaboliteSet[nchar(metaboliteSet[,"hmdb"]) == 11,"hmdb"] <- str_replace(metaboliteSet[nchar(metaboliteSet[,"hmdb"]) == 11,"hmdb"], pattern = "B00", replacement = "B")
+    
     # Get rid of any rows that still don't have an hmdb code
     index = which(metaboliteSet[,"hmdb"] == "character(0)")
     
@@ -353,7 +366,7 @@ for (i in 1:length(patients)){
     
     
     # Peform MSEA, one single patient and rare-gene variant at a time
-    # 1 = Fishers exact; 3 = Fisher weighted
+    # 0 = Fishers exact; 3 = Fisher weighted
     # Top stands for the top genes to perform the statistical test with, this is to normalise the different metabolite set-sizes
     retVal = performMSEA(metaboliteSet = savepoint_metaboliteSet, 
                          av_int_and_z_values_matrix = savepoint_p.values, 
@@ -363,20 +376,20 @@ for (i in 1:length(patients)){
                          thresh_F_pos, 
                          thresh_F_neg, 
                          path, 
-                         test = 1, 
+                         test = 0, 
                          top, 
                          id, 
                          patient_folder = patient_folder
     )
     print(mss[j])
-    
+
     # Get only the p.value and put all p.values with the patient and gene in one table
     print(retVal)
     p_value = as.numeric(retVal$p.value)
     if (length(p_value)==0){
       p_value=NA
     }
-    metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste0("P", patients[i]), "metabolite.set"=gene_in))
+    metSetResult <- rbind(metSetResult, c("p.value"=p_value, "patient"=paste0("P", patients[i]), "metabolite.set"=gene_in))
     
   }
   
@@ -401,3 +414,6 @@ for (i in 1:length(patients)){
 }
 # if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
 Sys.time()
+
+
+# }

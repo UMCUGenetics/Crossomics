@@ -172,15 +172,14 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   # }
     
   # Used for weighted Fishers test
-  # foldChange = av_int_and_z_values_matrix[,2]/avg.int.c # Dangerous, logFC_weight value of 1 means no change
-  # weighted_logFC = round(abs(log2(foldChange))^logFC_weight)
+  foldChange = av_int_and_z_values_matrix[,2]/avg.int.c # Dangerous, logFC_weight value of 1 means no change
+  weighted_logFC = round(abs(log2(foldChange))^logFC_weight)
   # weighted_logFC = round(abs(patient_z_values_vector)^logFC_weight)
-  # metsInset=cbind(metsInset, "names"= metNames, "hmdb_set"= hmdb_set, "weighted_logFC"=weighted_logFC[index], "FC"=foldChange[index], "z-score"=patient_z_values_vector[names(metsInset)], "path"=paths)
   metsInset=cbind(metsInset, 
                   "names"= metNames, 
                   "hmdb_set"= hmdb_set, 
-                  # "weighted_logFC"=weighted_logFC[index], 
-                  # "FC"=foldChange[index], 
+                  "weighted_logFC"=weighted_logFC[index],
+                  "FC"=foldChange[index],
                   "z-score"=patient_z_values_vector[rownames(metsInset)], 
                   "path"=paths)
   
@@ -321,7 +320,8 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
         # Possible problem: if the weighted logFC = 0, genes will also be present twice in the pseudoset.
         # This method isn't used much... references date from 2015 and 2016
         for (j in 1:as.numeric(metsInset[i,"weighted_logFC"])){
-          if (j == 0) next
+          # print(j)
+          # if (j == 0) next
           pseudoSet = rbind(pseudoSet, metsInset[i,])
           rownames(pseudoSet)[nrow(pseudoSet)] = paste(name, j, sep="_")
         }
@@ -386,7 +386,7 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   # if (length(index)>0) tmp2=metsInset[index,,drop=FALSE]
   # metsInset=rbind(tmp1,tmp2)
   
-  # This line replaces the chuck above this
+  # This line replaces the chunk above this
   metsInset <- metsInset[metsInset$InSetAboveThres,]
   
   # Changed name of p.value_ to z.average_
