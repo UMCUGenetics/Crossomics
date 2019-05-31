@@ -4,7 +4,7 @@ README - Crossomics
 
 
 
-This repository is for all Crossomics related scripts. The main script (for now) is GeneMetaboliteMapper_Marten_AdductSums.R, which is copied and modified from the similarly named GeneMetaboliteMapper_..._.R files. 
+This repository is for all Crossomics Metabolite Mapper scripts. The main script (for now) is GeneMetaboliteMapper_Marten_AdductSums.R, which is copied and modified from the similarly named GeneMetaboliteMapper_..._.R files. 
 
 Files directly dependent on the main file are getPValues_Marten.R and performMSEA_Marten.R. The getPValues file must be renamed in the near future to represent the fact that it only calculates Z-scores, no P.values.
 
