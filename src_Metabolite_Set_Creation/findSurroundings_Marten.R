@@ -19,7 +19,8 @@ run <- function(entry, outdir, src){
   # length(unique(HGNC2Uniprot[,"hgnc_symbol"]))
 
   # load(paste(src, "HGNC2Uniprot_prev.RData", sep="/"))
-  load(paste(src, "HGNC2Uniprot.RData", sep="/"))
+  # load(paste(src, "HGNC2Uniprot.RData", sep="/"))
+  HGNC2Uniprot <- readRDS(paste(src, "HGNC2Uniprot20190605.RDS", sep = "/")) # New version, added 06-06-2019
   
   cat("HGNC loaded\n") # Check for where the script is
   
