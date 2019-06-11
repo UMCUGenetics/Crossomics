@@ -2,50 +2,50 @@
 # Session info ------------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-cat(
-  "
-  Created by:   Marcel Willemse?
-  Modified by:  Marten Kerkhofs, 2019-04-26
-
-  Copied from 'GeneMetaboliteMapper_ME_Marten.R, on 29/03/2019 which in turn was copied from:
-  'GeneMetaboliteMapper_ME.R' in the Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients/src folder
-  on 26/03/2019 to investigate and annotate the functionality of the crossomics pipeline.
-  Disabled all save/generateExcel functions
-  
-  OS
-  macOS 10.14.4
-  
-  Package versions:
-  R version   3.5.1 (2018-07-02)
-  
-  stringr       1.4.0
-  Cairo         1.5-9
-  XLConnect     0.2-15
-  BridgeDbR     1.16.1
-  rJava         0.9-10
-  XLConnectJars 0.2-15
-  bioDist       1.54.0
-  KernSmooth    2.23-15
-  Biobase       2.42.0
-  BiocGenerics  0.28.0
-  
-  
-  USE:
-  This file takes a patient's metabolite and rare-gene variant data and performs metabolite set enrichment analysis
-  OR
-  This file takes a patient without WES data and creates a mock-gene set + diseased gene to perform metabolite set enrichment analysis
-  
-  Input:
-  Varying functions in the src folder
-  metabolite data from a patient: adductSums_xx.RData (xx = negative or positive) files
-  A gene set of a single patient which contains rare-gene variants in that patient
-  A patient number
-  ...
-  
-  Output
-
-  "
-)
+# cat(
+#   "
+#   Created by:   Marcel Willemse?
+#   Modified by:  Marten Kerkhofs, 2019-04-26
+# 
+#   Copied from 'GeneMetaboliteMapper_ME_Marten.R, on 29/03/2019 which in turn was copied from:
+#   'GeneMetaboliteMapper_ME.R' in the Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/Crossomics_SinglePatients/src folder
+#   on 26/03/2019 to investigate and annotate the functionality of the crossomics pipeline.
+#   Disabled all save/generateExcel functions
+#   
+#   OS
+#   macOS 10.14.4
+#   
+#   Package versions:
+#   R version   3.5.1 (2018-07-02)
+#   
+#   stringr       1.4.0
+#   Cairo         1.5-9
+#   XLConnect     0.2-15
+#   BridgeDbR     1.16.1
+#   rJava         0.9-10
+#   XLConnectJars 0.2-15
+#   bioDist       1.54.0
+#   KernSmooth    2.23-15
+#   Biobase       2.42.0
+#   BiocGenerics  0.28.0
+#   
+#   
+#   USE:
+#   This file takes a patient's metabolite and rare-gene variant data and performs metabolite set enrichment analysis
+#   OR
+#   This file takes a patient without WES data and creates a mock-gene set + diseased gene to perform metabolite set enrichment analysis
+#   
+#   Input:
+#   Varying functions in the src folder
+#   metabolite data from a patient: adductSums_xx.RData (xx = negative or positive) files
+#   A gene set of a single patient which contains rare-gene variants in that patient
+#   A patient number
+#   ...
+#   
+#   Output
+# 
+#   "
+# )
 
 
 

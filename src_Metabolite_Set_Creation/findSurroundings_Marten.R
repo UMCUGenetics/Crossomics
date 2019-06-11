@@ -45,6 +45,8 @@ run <- function(entry, outdir, src){
       f = paste0(paste(f,n,sep="_"),".RData")
     }
     save(rval, file=f)
+  } else {
+    cat("No metabolites/reactions found for", hgnc, "\n")
   }
 }
       
@@ -63,7 +65,7 @@ library(bitops)
 cmd_args = commandArgs(trailingOnly = TRUE)
 
 # TEST code{
-# cmd_args <- c("2", "/Users/mkerkho7/DIMS2_repo/Crossomics/Results", "/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Set_Creation")
+# cmd_args <- c("10176", "/Users/mkerkho7/DIMS2_repo/Crossomics/Results", "/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Set_Creation")
 #}
 
 for (arg in cmd_args) cat("  ", arg, "\n", sep="")
