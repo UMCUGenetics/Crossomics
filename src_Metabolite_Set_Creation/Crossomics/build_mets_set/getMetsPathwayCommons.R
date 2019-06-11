@@ -28,7 +28,8 @@ getMetsPathwayCommons <- function(id_uniprot, src){
   
   try({searchResults = searchPc(q = toString(id_uniprot), organism = "homo sapiens", type = "Catalysis")}, silent = TRUE)
   path = "Catalysis/controlled"
-  if (is.null(searchResults)){
+  if (grepl('numHits=\"0\"', as(searchResults, "character"))){
+  # if (is.null(searchResults)){ #never TRUE, searchResults will always contain an xml header
     message("No search results for Catalysis, try Control!!!")
     try({searchResults = searchPc(q = toString(id_uniprot), organism = "homo sapiens", type = "Control")}, silent = TRUE)
     path = "Control/controlled"
@@ -44,6 +45,7 @@ getMetsPathwayCommons <- function(id_uniprot, src){
   xml = NULL
   
   try({xml = traverse(uri = uris, path = path)}, silent = TRUE)
+  if(is.null(xml)){return(NULL)}
   uris2 = xpathSApply(xml, "//value/text()", xmlValue)
 
   # Transport
