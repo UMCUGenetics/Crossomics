@@ -39,8 +39,27 @@ Save gene.RData files in gene.RDS files. The RDS-format is a tad easier to work 
 
 
 EXTENDING METABOLITE SETS
-run.sh calls on extend.sh and gives it a SGE_TASK_ID, which in turn calls extend.R and gives it a gene_id (a single number, the same as the SGE_TASK_ID), an output folder and a folder where all supporting scripts can be found.
-Input used by extend.R are the files created by run_array_job.sh (mss_WG_step_0) and Recon2.RData.
-Scripts used by / downstream of extend.R are findMetabolicEnvironmentLocal.R, getMets2ReconID.R, convert.R, getReactionsRecon.R, removeMetsFromSet.R, getPreviousNext.R, and getMetsRecon2V2.R.
-Output: 4 different folders with extended metabolite sets (0 to 4 steps away from the primary reaction).
-It is unknown whether this can be run on the hpc, but probably not as it probably depends on rJava somewhere.
+GLOBAL: loop: run.sh
+		--> extend.sh
+			--> extend_Marten_Recon3.R
+				--> findMetabolicEnvironmentLocal_Marten_Recon3.R
+					<--> getMets2ReconID.R
+					<--> getReactionsRecon.R
+						<--> removeMetsFromSet.R
+					<--> removeMetsFromSet.R (4x)
+					<--> getPreviousNext.R (4x)
+						<--> getMetsRecon2V2.R
+						<--> getReactionsRecon.R
+							<--> removeMetsFromSet.R
+				save 5 gene-metabolite files, from step 0 to step 4
+	Repeat
+				
+* run.sh loops through numbers corresponding to the amount of gene-files produced by the previous, run_array_job.sh. It calls on extend.sh and gives extend.sh a SGE_TASK_ID.
+
+* extend.sh runs the R script 'extend.R' and gives it three values: 1. the SGE_TASK_ID as gene_id (a single number), 2. an output folder and 3. a folder where all supporting scripts can be found. 
+
+* Input necessary for this pipeline is a recon (3D) model and gene.RData files produced by run_array_job.sh, which are all loaded in in 'extend.R'. The recon3D model can be downloaded from www.VMH.life.
+
+* R scripts that are used by / downstream of extend_Marten_Recon3.R are findMetabolicEnvironmentLocal_Marten_Recon3.R, getMets2ReconID.R, getReactionsRecon.R, removeMetsFromSet.R, getPreviousNext.R, getMetsRecon2V2.R, and convert.R (the latter one is a very insignificant script that is used everywhere).
+
+* The number of genes that is looped through is dependent on how many files have been made by run_array_job.sh.
