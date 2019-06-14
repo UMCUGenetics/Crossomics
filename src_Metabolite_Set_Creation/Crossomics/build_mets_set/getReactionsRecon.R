@@ -22,6 +22,9 @@ getReactionsRecon <- function(index, model){
       next
     }
 
+    # For some weird reason, running R from command life gives errors if the following line is not present...
+head(model$S)
+    
     rxns_index = which(model$S[index[i],]!=0)
     
     rxns = NULL

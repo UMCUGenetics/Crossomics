@@ -30,7 +30,7 @@ run <- function(entry, outdir, src){
   model=Recon3D$Recon3D[,,1]
   recon2chebi=NULL
   
-  message(dim(model$S))
+  # message(dim(model$S))
   
   dir.create(paste(src, "../../Results/mss_0", sep="/"),showWarnings = FALSE)
   dir.create(paste(src, "../../Results/mss_1", sep="/"),showWarnings = FALSE)
@@ -59,9 +59,9 @@ run <- function(entry, outdir, src){
   # SLC7A7: entry=18425
   # grep("SLC7A7", files)
   
-  message(paste(src, "../../Results/mss_PathwayCommons"))
+  # message(paste(src, "../../Results/mss_PathwayCommons"))
   message(files[entry])
-  message(paste(src, "../../Results/mss_PathwayCommons", files[entry], sep="/"))
+  # message(paste(src, "../../Results/mss_PathwayCommons", files[entry], sep="/"))
 
   # load(paste(src, "../../Results/mss_PathwayCommons", files[entry], sep="/"))
   # load(paste(src, "../../Results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_WG_step_0", files[entry], sep="/"))
@@ -76,7 +76,7 @@ run <- function(entry, outdir, src){
 }
 
 message("Start")
-cat("==> reading arguments:\n", sep = "")
+# cat("==> reading arguments:\n", sep = "")
 
 cmd_args = commandArgs(trailingOnly = TRUE)
 
@@ -84,7 +84,7 @@ cmd_args = commandArgs(trailingOnly = TRUE)
 # cmd_args <- c("1", "/Users/mkerkho7/DIMS2_repo/Crossomics/Results", "/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Set_Creation")
 #}
 
-for (arg in cmd_args) cat("  ", arg, "\n", sep="")
+# for (arg in cmd_args) cat("  ", arg, "\n", sep="")
 
 run(entry = as.numeric(cmd_args[1]), outdir = cmd_args[2], src = cmd_args[3])
 
