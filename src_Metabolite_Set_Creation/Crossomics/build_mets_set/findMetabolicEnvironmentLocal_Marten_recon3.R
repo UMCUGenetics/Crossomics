@@ -108,17 +108,17 @@ findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, rval
     # result_mets_produced=result_mets_produced[order(result_mets_produced[,"rxn_formula"]),]
     
     if (length(consumed)>0 && length(produced)>0) {
-      result_mets = rbind(result_mets_consumed, result_mets_produced)
+      result_mets <- rbind(result_mets_consumed, result_mets_produced)
     } else if (length(consumed)==0 && length(produced)>0) {
-      result_mets = result_mets_produced
+      result_mets <- result_mets_produced
     } else if (length(consumed)>0 && length(produced)==0) {
-      result_mets = result_mets_consumed
+      result_mets <- result_mets_consumed
     } else {
-      result_mets = NULL
+      result_mets <- NULL
     }
     
-    result_mets <- result_mets[order(result_mets[,"rxn_formula"]),]
-    index = getMets2ReconID(result_mets, model)
+    result_mets <- result_mets[order(result_mets[,"rxn_formula"]),, drop=FALSE]
+    index = getMets2ReconID(mets = result_mets, model)
 
     if (length(index)>0){
       # replace empty entries by NA
