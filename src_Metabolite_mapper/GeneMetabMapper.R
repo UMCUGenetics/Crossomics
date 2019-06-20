@@ -47,6 +47,17 @@ for (i in uni_dat_pat){
   
   # patient <- paste0("P", str_pad(patient, width = 2, pad = "0"))
   Zint_scores <- generate_av_Z_scores(patient = patient)
+  rownames(Zint_scores)[nchar(rownames(Zint_scores)) == 9] <- str_replace(rownames(Zint_scores)[nchar(rownames(Zint_scores)) == 9], pattern = "HMDB", replacement = "HMDB00")
+  
+  tmp <- as.data.frame(apply(Zint_scores, 1, paste, collapse = ","))
+  colnames(tmp) <- "values"
+  tmp <- aggregate(rownames(tmp), by=tmp['values'], paste, collapse = ",")
+  rownames(tmp) <- tmp$x
+  tmp$x <- NULL
+  
+  tmp <- tidyr::separate(tmp, values, into = colnames(Zint_scores), sep = ",", convert = TRUE)
+  Zint_pruned <- as.matrix(tmp[order(rownames(tmp)),])
+  rm(tmp)
   
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   # Perform MSEA on all distances -------------------------------------------
@@ -103,7 +114,7 @@ for (i in uni_dat_pat){
     metSetResult = NULL
     nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
     for (j in 1:length(mss)){
-      cat("gene:", j, "\n")
+      cat("gene:", mss[j], "\n")
       # print(mss[j])
       # Skip the gene if there is no metabolite pathway xls_data available, elsewise, load its file
       if (!file.exists(paste(path2, mss[j], sep="/"))) next
@@ -219,7 +230,8 @@ for (i in uni_dat_pat){
       
       
       retVal = performMSEA(metaboliteSet = metaboliteSet, 
-                           av_int_and_z_values_matrix = Zint_scores, 
+                           # av_int_and_z_values_matrix = Zint_scores, 
+                           av_int_and_z_values_matrix = Zint_pruned,
                            patient = patient, 
                            gene_in, 
                            n_patients, 
