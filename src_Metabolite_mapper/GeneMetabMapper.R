@@ -19,7 +19,8 @@ uni_dat_pat <- unique(sapply(strsplit(dat_pat, split = "\\."), `[`, 1))
 # Perform metabolite mapper on all dat_pat -------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-for (i in uni_dat_pat){
+for (i in tmp_pat){
+# for (i in uni_dat_pat){
   
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   # Get patient and dataset -------------------------------------------------
@@ -105,7 +106,7 @@ for (i in uni_dat_pat){
   
   
   for (step in c(0:4)){
-    # cat("step:", step, "\n")
+    cat("step:", step, "\n")
     patient_folder <- paste(patient, dataset, "dis", step, sep = "_")
     
     path2 <- paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/Results/mss_", step)
@@ -116,6 +117,7 @@ for (i in uni_dat_pat){
     metSetResult = NULL
     nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
     for (j in 1:length(mss)){
+      if(j%%5 == 0) cat(j, "%...")
       # cat("gene:", mss[j], "number:", j,"\n")
       # Skip the gene if there is no metabolite pathway xls_data available, elsewise, load its file
       if (!file.exists(paste(path2, mss[j], sep="/"))) next
@@ -273,5 +275,6 @@ for (i in uni_dat_pat){
       #   overview = rbind(overview, t(tmp1))
       # }
     }
+    cat("\n\n")
   }
 }
