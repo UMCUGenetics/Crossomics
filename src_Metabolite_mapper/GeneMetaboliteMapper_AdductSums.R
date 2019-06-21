@@ -86,7 +86,7 @@ mock <- TRUE
 save_mock <- TRUE
 
 # Get the correct xls_data location on the basis of the patient number alone. 
-patients <- 2
+patients <- 6
 
 # Get correct dataset (see name of datasets) if patient is present in multiple (choose 0 or 1)(ignore when there is only 1 run present)
 run <- 0
@@ -194,7 +194,7 @@ overview <- NULL # at the end
 
 Sys.time()
 p.values.assi.all <- adductsHMDB_z_ave_and_int
-for (i in 1:length(patients)){
+# for (i in 1:length(patients)){
   
   patient_folder <- paste(patient[i], patient_datasets, "dis", distance_to_gene, sep = "_")
   
@@ -298,7 +298,7 @@ for (i in 1:length(patients)){
     # Don't know why this is necessary, metaboliteSet should have content at this point
     if (!is.null(metaboliteSet)){
       if (is.null(dim(metaboliteSet))){
-        metaboliteSet <- xls_data.frame(t(metaboliteSet), stringsAsFactors = FALSE)  # ME matrix transpose
+        metaboliteSet <- data.frame(t(metaboliteSet), stringsAsFactors = FALSE)  # ME matrix transpose
       }
     }
     
@@ -403,7 +403,7 @@ for (i in 1:length(patients)){
   }
   
   # Create a short excel file with the p.values and the number of metabolites associated with a gene
-  tmp <- xls_data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
+  tmp <- data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
   # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/",patient[i],"/Recon2/MSEA_results.xls",sep=""))
   # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
   # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/",patient_folder,"/Recon2/MSEA_results.xls",sep=""))
@@ -420,7 +420,7 @@ for (i in 1:length(patients)){
     overview = rbind(overview, t(tmp1))
   }
   
-}
+# }
 # if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
 Sys.time()
 
