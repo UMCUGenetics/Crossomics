@@ -1,0 +1,155 @@
+performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, test, top = 20, id="hmdb", patient_folder){
+
+    # set the dimensions of the pictures for later
+  width=1024
+  height=768
+  # Fold Change is put to the power logFC_weight (weighted_logFC = round(abs(log2(foldChange))^logFC_weight))
+  logFC_weight=1.2
+  
+  label <- paste0("av.z_", patient)
+  patient_z_values_vector = av_int_and_z_values_matrix[,label]
+  
+  # This is logFC_weight check, I think there shouldn't be any is.na(p)
+  patient_z_values_vector = patient_z_values_vector[!is.na(patient_z_values_vector)]
+  
+  # average of the control intensity values and paste it to the end of the previous matrix
+  avg.int.c <- apply(av_int_and_z_values_matrix[,grep("C", colnames(av_int_and_z_values_matrix), fixed = TRUE)], 1, mean)
+  av_int_and_z_values_matrix <- cbind(av_int_and_z_values_matrix,"avg.int.controls"=avg.int.c) 
+  
+  # Get boolean of all HMDB codes indicating exceding either one of the threshold values
+  allMetsExcedingThres <- patient_z_values_vector > thresh_F_pos | patient_z_values_vector < thresh_F_neg
+  
+  split_names <- strsplit(rownames(Zint_pruned), split = ",")
+  # tmp <- strsplit(rownames(metsInset), split = ",")
+  
+  indices <- NULL
+  for(row_num in 1:nrow(metaboliteSet)){
+    res <- lapply(split_names, function(sp_nam) grep(metaboliteSet[row_num,"hmdb"], sp_nam))
+    
+    # which vectors contain a search term
+    index <- which(sapply(res, function(x) length(x) > 0))
+    if(length(index) > 0){
+      indices <- c(indices, index)
+    } else {
+      indices <- c(indices, NA)
+    }
+  }
+  
+  # Check if there are any metabolites actually present in both the sets and intensity scores
+  if(length(index) == 0) return(list("p.value"= 1))
+  
+  # Make single rows of all rows that contain indistinguishable HMDBs.
+  MetSet_short <- cbind(metaboliteSet, "alt_HMDB" = rownames(Zint_pruned)[indices])
+  MetSet_short <- MetSet_short[!is.na(MetSet_short[,"alt_HMDB"]),, drop = FALSE]
+  
+  newdf <- MetSet_short[!duplicated(MetSet_short[,"alt_HMDB"]),, drop = FALSE]
+  newdf <- newdf[order(newdf[,"alt_HMDB"]), , drop = FALSE]
+  MetSet_short[is.na(MetSet_short)] <- "NA"
+  
+  if(any(duplicated(MetSet_short[,"alt_HMDB"]))){
+    for(colname in colnames(newdf)[1:length(colnames(newdf))-1]){
+      newdf[, colname] <- aggregate(MetSet_short[,colname]~alt_HMDB, data=MetSet_short, toString, drop = FALSE)[,2]
+    }
+  }
+
+  
+  
+  index <- names(patient_z_values_vector) %in% newdf[,"alt_HMDB"]
+  metsInset <- data.frame("InSetAboveThres" = allMetsExcedingThres[index])
+  if(nrow(metsInset) == 0)   return(list("p.value"= 1))
+  
+  metNames <- newdf[match(newdf[,"alt_HMDB"], rownames(metsInset)),"met_long"]
+  
+  
+  # TRYING TO GET THESE PATHS AND HMDB_SET FUNCTION SIMPLER AND WORKING WITH THE NEW STRUCTURE
+  # This may be enough to replace the cluster#@-function of paths underneath...
+  # I think this is only possible atm because I already removed duplicate hmdb names and have easier rownames (already adducts).
+  paths <- newdf[match(rownames(metsInset), newdf[,"alt_HMDB"]),"path"]
+  hmdb_set <- newdf[match(rownames(metsInset), newdf[,"alt_HMDB"]),"hmdb"]
+  
+  
+  # Used for weighted Fishers test
+  foldChange = av_int_and_z_values_matrix[,2]/avg.int.c # Dangerous, logFC_weight value of 1 means no change
+  weighted_logFC = round(abs(log2(foldChange))^logFC_weight)
+  metsInset=cbind(metsInset, 
+                  "names"= metNames, 
+                  "hmdb_set"= hmdb_set, 
+                  "weighted_logFC"=weighted_logFC[index],
+                  "FC"=foldChange[index],
+                  "z-score"=patient_z_values_vector[rownames(metsInset)], 
+                  "path"=paths)
+  
+  # Discard double rows
+  metsInset = unique(metsInset, drop=FALSE)
+
+  inSetAboveThresh=sum(metsInset[,"InSetAboveThres"])
+  inSetBelowThresh=sum(!metsInset[,"InSetAboveThres"])
+  notInSetAboveThresh <- sum(allMetsExcedingThres) - inSetAboveThresh
+  notInSetBelowThresh <- sum(!allMetsExcedingThres) - inSetBelowThresh
+  
+
+
+  # Fishers exact test ######################################################################
+  ###########################################################################################
+  enrichment =
+    matrix(c(inSetAboveThresh, inSetBelowThresh, notInSetAboveThresh, notInSetBelowThresh),
+           nrow = 2,
+           dimnames = list(c("above_thresh", "below_thresh"),c("in_set", "not_in_set")))
+  retVal = fisher.test(enrichment, alternative = "greater")
+  p = retVal$p.value
+  ###########################################################################################
+    
+  
+  # Code for creating just the metsInset exceding the thresholds
+  metsInset <- metsInset[metsInset$InSetAboveThres,]
+  
+  ints <- av_int_and_z_values_matrix[rownames(metsInset), -grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  z_values <- av_int_and_z_values_matrix[rownames(metsInset), grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  
+  
+  rownames(ints) = metsInset[,"names"]
+  rownames(z_values) = metsInset[,"names"]
+  
+  ints <- ints[, -grep("avg.int.controls", colnames(ints), fixed=TRUE),drop=FALSE]
+  
+  # Remove negative and NA values
+  ints[ints<0] <- NA
+  ints[is.na(ints)] <- 0
+  
+  # Whole column zeros
+  remove <- which(colSums(ints)==0)
+  if (length(remove)>0) ints = ints[,-as.numeric(remove), drop=FALSE]
+  
+  if (length(z_values) > 1) {
+
+    CairoPNG(filename=paste(path, "/", patient_folder, "/", gene_in,".png",sep=""), width, height)
+    
+    hm = heatmap(as.matrix(ints),
+                 scale="row",
+                 #distfun = "euclidean", #spearman.dist,
+                 col=colorRampPalette(c("yellow","blue"))(100),
+                 margins=c(2.5,26),
+                 labRow = metsInset[,"hmdb_set"])
+    
+    dev.off()
+    
+    ints = ints[hm$rowInd,hm$colInd]
+    labels = colnames(z_values)
+    z_values = as.data.frame(z_values[hm$rowInd,])
+    colnames(z_values)=labels
+    metsInset = metsInset[hm$rowInd,]
+  }
+  
+  ints = data.frame("compound"=rownames(ints),
+                    "HMDB_set"=metsInset[,"hmdb_set"], 
+                    "Z score" = as.numeric(z_values[,grep(colnames(z_values),pattern=toString(patient),fixed=TRUE)]),
+                    "path"=metsInset[,"path"],
+                    "HMDB"=rownames(metsInset),
+                    ints)
+  
+  ints=ints[order(ints[,"Z.score"]),]
+  
+  genExcelFileShort(as.data.frame(ints), paste(path, "/", patient_folder, "/", gene_in,".xls",sep=""))
+  
+  return(list("p.value"=p))
+}
