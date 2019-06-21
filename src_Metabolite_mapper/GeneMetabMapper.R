@@ -1,6 +1,7 @@
 library("XLConnect") # excel connect function
 library("stringr") # string manipulation, add leading 0's
 library("BridgeDbR")
+library("Cairo")
 
 source("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive/sourceDir.R")
 sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive")
@@ -46,6 +47,7 @@ for (i in uni_dat_pat){
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   
   # patient <- paste0("P", str_pad(patient, width = 2, pad = "0"))
+  # For this function to work, you need to be in the folder where the patient data is present
   Zint_scores <- generate_av_Z_scores(patient = patient)
   rownames(Zint_scores)[nchar(rownames(Zint_scores)) == 9] <- str_replace(rownames(Zint_scores)[nchar(rownames(Zint_scores)) == 9], pattern = "HMDB", replacement = "HMDB00")
   
@@ -103,7 +105,7 @@ for (i in uni_dat_pat){
   
   
   for (step in c(0:4)){
-    cat("step:", step, "\n")
+    # cat("step:", step, "\n")
     patient_folder <- paste(patient, dataset, "dis", step, sep = "_")
     
     path2 <- paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/Results/mss_", step)
@@ -114,8 +116,7 @@ for (i in uni_dat_pat){
     metSetResult = NULL
     nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
     for (j in 1:length(mss)){
-      cat("gene:", mss[j], "\n")
-      # print(mss[j])
+      # cat("gene:", mss[j], "number:", j,"\n")
       # Skip the gene if there is no metabolite pathway xls_data available, elsewise, load its file
       if (!file.exists(paste(path2, mss[j], sep="/"))) next
       
@@ -141,6 +142,10 @@ for (i in uni_dat_pat){
         colnames(metaboliteSet) <- dimnames
         rm(dimnames)
       }
+      
+      # Strip the "chebi" column of the text "CHEBI", which is present in some of the rows
+      metaboliteSet[,"chebi"] <- gsub("CHEBI:", "", metaboliteSet[,"chebi"], fixed = TRUE)
+      
       
       # Set all NA's to "character (0)" in the ID columns
       metaboliteSet[,c("hmdb","kegg","chebi")][is.na(metaboliteSet[,c("hmdb","kegg","chebi")])] <- "character(0)"
@@ -216,11 +221,14 @@ for (i in uni_dat_pat){
       index = which(metaboliteSet[,"hmdb"] == "character(0)")
       
       if (length(index)>0) metaboliteSet <- metaboliteSet[-index,,drop=FALSE]
+      if (nrow(metaboliteSet) == 0) next
       
       # Get the total number of unique metabolites for all genes in one vector
       # nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
       # Improved check for same compounds, including if either chebi, kegg or hmdb have duplicated values. Return number of metabolites
       # nMets <- c(nMets, sum(apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = NA), 1, all)))
+      
+      
       
       # Remove duplicate metabolites (added by Marten)
       if(nrow(metaboliteSet) >1){
