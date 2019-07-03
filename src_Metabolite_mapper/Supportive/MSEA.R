@@ -22,6 +22,7 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   split_names <- strsplit(rownames(Zint_pruned), split = ",")
   # tmp <- strsplit(rownames(metsInset), split = ",")
   
+  # Get location of the metaboliteSet metabolites in the intensity/Z-scores matrix.
   indices <- NULL
   for(row_num in 1:nrow(metaboliteSet)){
     res <- lapply(split_names, function(sp_nam) grep(metaboliteSet[row_num,"hmdb"], sp_nam))
@@ -36,7 +37,8 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   }
   
   # Check if there are any metabolites actually present in both the sets and intensity scores
-  if(length(index) == 0) return(list("p.value"= 1))
+  # if(length(indices) == 0) return(list("p.value"= 1))
+  if(all(is.na(indices))) return(list("p.value"= 1))
   
   # Make single rows of all rows that contain indistinguishable HMDBs.
   MetSet_short <- cbind(metaboliteSet, "alt_HMDB" = rownames(Zint_pruned)[indices])
@@ -124,12 +126,17 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
 
     CairoPNG(filename=paste(path, "/", patient_folder, "/", gene_in,".png",sep=""), width, height)
     
-    hm = heatmap(as.matrix(ints),
-                 scale="row",
-                 #distfun = "euclidean", #spearman.dist,
-                 col=colorRampPalette(c("yellow","blue"))(100),
-                 margins=c(2.5,26),
-                 labRow = metsInset[,"hmdb_set"])
+    # hm = heatmap(as.matrix(ints),
+    #              scale="row",
+    #              #distfun = "euclidean", #spearman.dist,
+    #              col=colorRampPalette(c("yellow","blue"))(100),
+    #              margins=c(2.5,26),
+    #              labRow = metsInset[,"hmdb_set"])
+    # 
+    hm <- heatmap3::heatmap3(ints,
+                             col = colorRampPalette(c("navy", "white", "firebrick3"))(1024),
+                             balanceColor = TRUE,
+                             labRow = metsInset[,"hmdb_set"])
     
     dev.off()
     
