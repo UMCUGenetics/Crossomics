@@ -19,8 +19,8 @@ uni_dat_pat <- unique(sapply(strsplit(dat_pat, split = "\\."), `[`, 1))
 # Perform metabolite mapper on all dat_pat -------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-for (i in tmp_pat){
-# for (i in uni_dat_pat){
+
+for (i in uni_dat_pat){
   
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   # Get patient and dataset -------------------------------------------------
@@ -73,7 +73,7 @@ for (i in tmp_pat){
   id <- "hmdb"
   seed = 313
   nr_mocks = 100
-  save_mock = FALSE
+  save_mock = TRUE
   
   
   # Prepare mock gene set ---------------------------------------------------
@@ -95,6 +95,9 @@ for (i in tmp_pat){
     mss <- paste(genes,"RData",sep=".")
     
     # save mock genes + real gene
+    patient_folder <- paste(patient, dataset, sep = "_")
+    dir.create(paste(path,"/",patient_folder, sep=""), showWarnings = FALSE)
+    
     if(save_mock) write.table(genes, file = paste0(path, "/", patient_folder, "/mock_genes_seed",seed,".txt"), row.names = FALSE, col.names = FALSE)
   } else {
     # Real WES ----------------------------------------------------------------
@@ -107,17 +110,18 @@ for (i in tmp_pat){
   
   for (step in c(0:4)){
     cat("step:", step, "\n")
-    patient_folder <- paste(patient, dataset, "dis", step, sep = "_")
+    step_folder <- paste0(patient_folder,"/step_", step)
     
     path2 <- paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/Results/mss_", step)
     overview <- NULL # at the end
     
-    dir.create(paste(path,"/",patient_folder, sep=""), showWarnings = FALSE)
+    dir.create(paste(path,"/",step_folder, sep=""), showWarnings = FALSE)
     
     metSetResult = NULL
     nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
+
     for (j in 1:length(mss)){
-      if(j%%5 == 0) cat(j, "%...")
+      if(j%%5 == 0) cat(paste0(j, "%... "))
       # cat("gene:", mss[j], "number:", j,"\n")
       # Skip the gene if there is no metabolite pathway xls_data available, elsewise, load its file
       if (!file.exists(paste(path2, mss[j], sep="/"))) next
@@ -152,11 +156,14 @@ for (i in tmp_pat){
       # Set all NA's to "character (0)" in the ID columns
       metaboliteSet[,c("hmdb","kegg","chebi")][is.na(metaboliteSet[,c("hmdb","kegg","chebi")])] <- "character(0)"
       
+      # Remove any faulty HMDB codes (they must have 9 characters at this point: the old numbering)
+      metaboliteSet[nchar(metaboliteSet[,"hmdb"]) != 9 & metaboliteSet[,"hmdb"] != "character(0)", "hmdb"] <- "character(0)"
+      
       # Add HMDB codes when possible, remove metabolites otherwise
       if (all(metaboliteSet[,c("hmdb","kegg","chebi")] == "character(0)")) next
       
       mapper <- BridgeDbR::loadDatabase("/Users/mkerkho7/DIMS2_repo/Crossomics/metabolites_20190509.bridge")
-      hmdb = BridgeDbR::getSystemCode("HMDB")
+      hmdb <- BridgeDbR::getSystemCode("HMDB")
       
       getHMDBcode <- function(metaboliteSet, identifier){
         index <- which(metaboliteSet[,"hmdb"] == "character(0)") 
@@ -251,7 +258,7 @@ for (i in tmp_pat){
                            test = 0, 
                            top, 
                            id, 
-                           patient_folder = patient_folder
+                           patient_folder = step_folder
       )
       # cat(retVal, "\n")
       p_value = as.numeric(retVal$p.value)
@@ -262,7 +269,7 @@ for (i in tmp_pat){
       
       nMets <- nrow(metaboliteSet)
       tmp <- data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-      genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/",patient_folder,"/MSEA_results.xls",sep=""))
+      genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste0(path,step_folder,"/MSEA_results.xls"))
       
       # if (!is.null(genes)){
       #   tmp1 = tmp[order(tmp[,"p.value"]),]
