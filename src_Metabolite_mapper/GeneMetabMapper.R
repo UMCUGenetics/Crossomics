@@ -3,8 +3,12 @@ library("stringr") # string manipulation, add leading 0's
 library("BridgeDbR")
 library("Cairo")
 
-source("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive/sourceDir.R")
-sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive")
+code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+source(paste0(code_dir,"/Supportive/sourceDir.R"))
+sourceDir(paste0(code_dir,"/Supportive"))
+
+# source("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive/sourceDir.R")
+# sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive")
 
 
 patient_file <- "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/Crossomics_DBS_Marten_Training.xlsx"
