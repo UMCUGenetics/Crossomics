@@ -1,4 +1,4 @@
-library("XLConnect") # excel connect function
+# library("XLConnect") # excel connect function
 library("stringr") # string manipulation, add leading 0's
 library("BridgeDbR")
 library("Cairo")
@@ -10,11 +10,12 @@ sourceDir(paste0(code_dir,"/Supportive"))
 # source("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive/sourceDir.R")
 # sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive")
 
-patient_file <- paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.xlsx")
+# patient_file <- paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.xlsx")
 # patient_file <- "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/Crossomics_DBS_Marten_Training.xlsx"
 # wb = loadWorkbook(patient_file, create = TRUE)
-wb = loadWorkbook(patient_file)
-xls_data = readWorksheet(wb, sheet = 1, startRow = 0, endRow = 0, startCol = 0, endCol = 0)
+# wb = loadWorkbook(patient_file)
+# xls_data = readWorksheet(wb, sheet = 1, startRow = 0, endRow = 0, startCol = 0, endCol = 0)
+load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.RData"))
 
 dat_pat <- paste(xls_data$Dataset, xls_data$Patient.number, sep = "^")
 uni_dat_pat <- unique(sapply(strsplit(dat_pat, split = "\\."), `[`, 1))
