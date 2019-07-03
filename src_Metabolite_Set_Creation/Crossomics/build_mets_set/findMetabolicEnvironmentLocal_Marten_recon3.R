@@ -17,7 +17,7 @@ findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, rval
     A = mets[,"met_long"]
     unic = !duplicated(A)  ## logical vector of unique values
     index = seq_along(A)[unic]  ## indices
-    mets = mets[index,]
+    mets = mets[index, , drop = FALSE]
 
     # genExcelFileShort(as.data.frame(mets), paste("./results/mets.min.unic.", HGNC,".xls",sep=""))
 
