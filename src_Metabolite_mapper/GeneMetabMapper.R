@@ -10,8 +10,8 @@ sourceDir(paste0(code_dir,"/Supportive"))
 # source("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive/sourceDir.R")
 # sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive")
 
-
-patient_file <- "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/Crossomics_DBS_Marten_Training.xlsx"
+patient_file <- paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.xlsx")
+# patient_file <- "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/Crossomics_DBS_Marten_Training.xlsx"
 # wb = loadWorkbook(patient_file, create = TRUE)
 wb = loadWorkbook(patient_file)
 xls_data = readWorksheet(wb, sheet = 1, startRow = 0, endRow = 0, startCol = 0, endCol = 0)
@@ -70,7 +70,8 @@ for (i in uni_dat_pat){
   # Perform MSEA on all distances -------------------------------------------
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   
-  path <- "/Users/mkerkho7/DIMS2_repo/TestResults/"
+  # path <- "/Users/mkerkho7/DIMS2_repo/TestResults/"
+  path <- paste0(code_dir,"/../Results/")
   thresh_F_pos <- 1.5
   thresh_F_neg <- -1
   top <- 20
@@ -84,7 +85,8 @@ for (i in uni_dat_pat){
   genes <- NULL
   if (!file.exists(paste0("./db/P",patient,"_HGNC.txt"))){
     # For getting random mock genes
-    mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+    mock_genes <- read.table(file = paste0(code_dir,"/../Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt"), header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+    # mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
     mock_genes <- mock_genes[mock_genes$Gene.type == "protein_coding",]
     mock_genes <- mock_genes[!mock_genes$HGNC.ID == "",]
     mock_genes <- mock_genes[!duplicated(mock_genes$Gene.name),]
@@ -116,7 +118,8 @@ for (i in uni_dat_pat){
     cat("step:", step, "\n")
     step_folder <- paste0(patient_folder,"/step_", step)
     
-    path2 <- paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/Results/mss_", step)
+    path2 <- paste0(code_dir,"/../Data/mss_", step)
+    # path2 <- paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/Results/mss_", step)
     overview <- NULL # at the end
     
     dir.create(paste(path,"/",step_folder, sep=""), showWarnings = FALSE)
@@ -166,7 +169,8 @@ for (i in uni_dat_pat){
       # Add HMDB codes when possible, remove metabolites otherwise
       if (all(metaboliteSet[,c("hmdb","kegg","chebi")] == "character(0)")) next
       
-      mapper <- BridgeDbR::loadDatabase("/Users/mkerkho7/DIMS2_repo/Crossomics/metabolites_20190509.bridge")
+      mapper <- BridgeDbR::loadDatabase(paste0(code_dir,"/../Data/metabolites_20190509.bridge"))
+      # mapper <- BridgeDbR::loadDatabase("/Users/mkerkho7/DIMS2_repo/Crossomics/metabolites_20190509.bridge")
       hmdb <- BridgeDbR::getSystemCode("HMDB")
       
       getHMDBcode <- function(metaboliteSet, identifier){
