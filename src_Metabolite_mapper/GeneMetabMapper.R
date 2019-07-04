@@ -1,7 +1,33 @@
-# library("XLConnect") # excel connect function
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# SessionInfo -------------------------------------------------------------
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# R version:  3.6.0 (2019-04-26)
+# platform:   x86_64-apple-darwin15.6.0 (64-bit)
+# OS:         macOS Mojave 10.14.5
+# 
+# libraries:
+# XLConnect   0.2-15
+# heatmap3    1.1.6
+# tidyr       0.8.3
+# rstudioapi  0.10
+# Cairo       1.5-10
+# BridgeDbR   1.18.0
+# rJava       0.9-11
+# stringr     1.4.0
+
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Load data ---------------------------------------------------------------
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+library("XLConnect") # excel connect function
 library("stringr") # string manipulation, add leading 0's
 library("BridgeDbR")
 library("Cairo")
+library("rstudioapi")
+library("tidyr")
+library("heatmap3")
 
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 source(paste0(code_dir,"/Supportive/sourceDir.R"))
@@ -23,7 +49,6 @@ uni_dat_pat <- unique(sapply(strsplit(dat_pat, split = "\\."), `[`, 1))
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Perform metabolite mapper on all dat_pat -------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 
 for (i in uni_dat_pat){
   
