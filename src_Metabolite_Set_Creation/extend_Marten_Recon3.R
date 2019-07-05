@@ -12,8 +12,8 @@ run <- function(entry, outdir, src){
   # sourceDir(paste(src, "Crossomics/build_mets_set", sep="/"))
   # sourceDir(paste(src, "Crossomics", sep="/"))
   
-  source(paste0(code_dir,"/Supportive/sourceDir.R"))
-  sourceDir(paste0(code_dir,"/Supportive"))
+  source(paste0(src,"/Supportive/sourceDir.R"))
+  sourceDir(paste0(src,"/Supportive"))
   
   # if (reconVersion==2.2){
   #   
@@ -104,6 +104,10 @@ cmd_args = commandArgs(trailingOnly = TRUE)
 
 # for (arg in cmd_args) cat("  ", arg, "\n", sep="")
 
+# library("rstudioapi")
+# code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+
 run(entry = as.numeric(cmd_args[1]), outdir = cmd_args[2], src = cmd_args[3])
+# run(entry = as.numeric(cmd_args[1]), outdir = cmd_args[2], src = code_dir)
 
 message("Ready")
