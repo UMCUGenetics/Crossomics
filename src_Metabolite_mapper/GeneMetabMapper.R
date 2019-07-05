@@ -65,6 +65,13 @@ for (i in uni_dat_pat){
   # Get disease gene for patient
   dis_gene <- xls_data$Gene[grepl(patient, xls_data$Patient.number) & xls_data$Dataset == dataset][1]
   
+  # In the case there are multiple disease genes stated:
+  if(grepl(";",dis_gene)){
+    dis_gene <- unlist(strsplit(dis_gene, split = "; "))
+    dis_gene <- trimws(dis_gene)
+    cat(length(dis_gene), "disease genes found, total mock gene set will be", 100+length(dis_gene),"\n")
+  }
+  
   data_location <- xls_data$Location[match(dataset, xls_data$Dataset)]
   # Make dataset location mac-compatible
   data_location <- gsub("Y:", "/Volumes/Metab", data_location)
@@ -103,34 +110,35 @@ for (i in uni_dat_pat){
   top <- 20
   id <- "hmdb"
   seed = 313
-  nr_mocks = 100
-  save_mock = TRUE
+  # nr_mocks = 100
+  # save_mock = TRUE
   
   
   # Prepare mock gene set ---------------------------------------------------
   genes <- NULL
   if (!file.exists(paste0("./db/P",patient,"_HGNC.txt"))){
-    # For getting random mock genes
-    mock_genes <- read.table(file = paste0(code_dir,"/../Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt"), header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-    # mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-    mock_genes <- mock_genes[mock_genes$Gene.type == "protein_coding",]
-    mock_genes <- mock_genes[!mock_genes$HGNC.ID == "",]
-    mock_genes <- mock_genes[!duplicated(mock_genes$Gene.name),]
-    mock_genes <- mock_genes[!grepl("orf", mock_genes$Gene.name),]
-    mock_genes <- mock_genes$Gene.name
-    
-    # make sure that the disease gene isn't included twice by removing it from the mock_genes list
-    mock_genes <- mock_genes[mock_genes != dis_gene]
-    set.seed(seed = seed)
-    genes <- sample(mock_genes, size = nr_mocks)
-    genes <- c(genes, dis_gene)
+    # # For getting random mock genes
+    # mock_genes <- read.table(file = paste0(code_dir,"/../Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt"), header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+    # # mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+    # mock_genes <- mock_genes[mock_genes$Gene.type == "protein_coding",]
+    # mock_genes <- mock_genes[!mock_genes$HGNC.ID == "",]
+    # mock_genes <- mock_genes[!duplicated(mock_genes$Gene.name),]
+    # mock_genes <- mock_genes[!grepl("orf", mock_genes$Gene.name),]
+    # mock_genes <- mock_genes$Gene.name
+    # 
+    # # make sure that the disease gene isn't included twice by removing it from the mock_genes list
+    # mock_genes <- mock_genes[mock_genes != dis_gene]
+    # set.seed(seed = seed)
+    # genes <- sample(mock_genes, size = nr_mocks)
+    mock_genes <- scan(file = paste0(path, "/mock_genes_seed",seed,".txt"), what = "character", quiet = TRUE)
+    genes <- c(mock_genes, dis_gene)
     mss <- paste(genes,"RData",sep=".")
     
     # save mock genes + real gene
     patient_folder <- paste(patient, dataset, sep = "_")
     dir.create(paste(path,"/",patient_folder, sep=""), showWarnings = FALSE)
     
-    if(save_mock) write.table(genes, file = paste0(path, "/", patient_folder, "/mock_genes_seed",seed,".txt"), row.names = FALSE, col.names = FALSE)
+    # if(save_mock) write.table(genes, file = paste0(path, "/", patient_folder, "/mock_genes_seed",seed,".txt"), row.names = FALSE, col.names = FALSE)
   } else {
     # Real WES ----------------------------------------------------------------
     mss = read.table(paste0("./db/P",patient,"_HGNC.txt"), header = FALSE, sep="\t")
@@ -148,7 +156,7 @@ for (i in uni_dat_pat){
     # path2 <- paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/Results/mss_", step)
     overview <- NULL # at the end
     
-    dir.create(paste(path,"/",step_folder, sep=""), showWarnings = FALSE)
+    dir.create(paste0(path,step_folder), showWarnings = FALSE)
     
     metSetResult = NULL
     nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
