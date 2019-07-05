@@ -1,4 +1,4 @@
-findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, rval){
+findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, outdir, rval){
 # gene_in=hgnc
 
   removeExchange <- function(mets){
@@ -48,8 +48,8 @@ findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, rval
     if (length(consumed)>0) {
       
       # Do not convert to ReconID in primary reaction!
-      amount = dim(consumed)[1]
-      result_mets_consumed = cbind("rxn_id"=rep(toString(gene_in),amount),
+      amount <- nrow(consumed)
+      result_mets_consumed <- cbind("rxn_id"=rep(toString(gene_in),amount),
                                    "step"=rep(0,amount),
                                    "met_in"=rep(NA,amount),
                                    "left_right"=rep("left",amount),
@@ -63,11 +63,10 @@ findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, rval
                                    "rxn_name"=rep(NA,amount),
                                    "rxn"=rep(NA,amount),
                                    "resource"=consumed[,"Data Source"])
-      tmp=NULL
-      for (i in 1:dim(result_mets_consumed)[1]){
-        source = rxns[grep(result_mets_consumed[i,"resource"], names(rxns), fixed=TRUE)]
-        tmp=c(tmp,
-        paste(source[grep(result_mets_consumed[i,"met_short"], source, fixed = TRUE)],collapse = ";"))
+      tmp <- NULL
+      for (i in 1:nrow(result_mets_consumed)){
+        source <- rxns[grep(result_mets_consumed[i,"resource"], names(rxns), fixed=TRUE)]
+        tmp <- c(tmp, paste(source[grep(result_mets_consumed[i,"met_short"], source, fixed = TRUE)],collapse = ";"))
       }
       
       result_mets_consumed = cbind(result_mets_consumed,"rxn_formula"=tmp)
@@ -118,7 +117,7 @@ findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, rval
     }
     
     result_mets <- result_mets[order(result_mets[,"rxn_formula"]),, drop=FALSE]
-    index = getMets2ReconID(mets = result_mets, model)
+    index <- getMets2ReconID(mets = result_mets, model)
 
     if (length(index)>0){
       # replace empty entries by NA
@@ -155,7 +154,7 @@ findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, rval
 
     # step -1,1 ###################################################################################
     index_primary = unique(c(index))
-    index_primary_removed = removeMetsFromSet(index_primary,model)
+    index_primary_removed = removeMetsFromSet(index = index_primary,model)
     
 # unique(unlist(model$metNames[index_primary]))
 # unique(unlist(model$metNames[index_primary_removed]))
@@ -242,23 +241,29 @@ findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, rval
     if (is.null(result_mets_4)) result_mets_4 = result_mets_3
     # result_mets=result_mets[,-c(which(colnames(result_mets)=="InChI_key"))]
 
-    result_mets_4 = rbind(result_mets,result_mets_1,result_mets_2,result_mets_3,result_mets_4)
-    result_mets_3 = rbind(result_mets,result_mets_1,result_mets_2,result_mets_3)
-    result_mets_2 = rbind(result_mets,result_mets_1,result_mets_2)
-    result_mets_1 = rbind(result_mets,result_mets_1)
-    result_mets_0 = result_mets
+    result_mets_4 <- rbind(result_mets,result_mets_1,result_mets_2,result_mets_3,result_mets_4)
+    result_mets_3 <- rbind(result_mets,result_mets_1,result_mets_2,result_mets_3)
+    result_mets_2 <- rbind(result_mets,result_mets_1,result_mets_2)
+    result_mets_1 <- rbind(result_mets,result_mets_1)
+    result_mets_0 <- result_mets
     
-    if (dim(result_mets_4)[1]>0) result_mets_4 = removeExchange(result_mets_4)
-    if (dim(result_mets_3)[1]>0) result_mets_3 = removeExchange(result_mets_3)
-    if (dim(result_mets_2)[1]>0) result_mets_2 = removeExchange(result_mets_2)
-    if (dim(result_mets_1)[1]>0) result_mets_1 = removeExchange(result_mets_1)
-    if (dim(result_mets_0)[1]>0) result_mets_0 = removeExchange(result_mets_0)
+    if (nrow(result_mets_4)>0) result_mets_4 <- removeExchange(result_mets_4)
+    if (nrow(result_mets_3)>0) result_mets_3 <- removeExchange(result_mets_3)
+    if (nrow(result_mets_2)>0) result_mets_2 <- removeExchange(result_mets_2)
+    if (nrow(result_mets_1)>0) result_mets_1 <- removeExchange(result_mets_1)
+    if (nrow(result_mets_0)>0) result_mets_0 <- removeExchange(result_mets_0)
 
-    save(result_mets_4, file=paste(src, "../../Results/mss_4",paste(gene_in, "RData", sep="."), sep="/"))
-    save(result_mets_3, file=paste(src, "../../Results/mss_3",paste(gene_in, "RData", sep="."), sep="/"))
-    save(result_mets_2, file=paste(src, "../../Results/mss_2",paste(gene_in, "RData", sep="."), sep="/"))
-    save(result_mets_1, file=paste(src, "../../Results/mss_1",paste(gene_in, "RData", sep="."), sep="/"))
-    save(result_mets_0, file=paste(src, "../../Results/mss_0",paste(gene_in, "RData", sep="."), sep="/"))
+    # save(result_mets_4, file=paste(src, "../../Results/mss_4",paste(gene_in, "RData", sep="."), sep="/"))
+    # save(result_mets_3, file=paste(src, "../../Results/mss_3",paste(gene_in, "RData", sep="."), sep="/"))
+    # save(result_mets_2, file=paste(src, "../../Results/mss_2",paste(gene_in, "RData", sep="."), sep="/"))
+    # save(result_mets_1, file=paste(src, "../../Results/mss_1",paste(gene_in, "RData", sep="."), sep="/"))
+    # save(result_mets_0, file=paste(src, "../../Results/mss_0",paste(gene_in, "RData", sep="."), sep="/"))
+    
+    save(result_mets_4, file=paste(outdir,"mss_4",paste(gene_in, "RData", sep="."), sep="/"))
+    save(result_mets_3, file=paste(outdir,"mss_3",paste(gene_in, "RData", sep="."), sep="/"))
+    save(result_mets_2, file=paste(outdir,"mss_2",paste(gene_in, "RData", sep="."), sep="/"))
+    save(result_mets_1, file=paste(outdir,"mss_1",paste(gene_in, "RData", sep="."), sep="/"))
+    save(result_mets_0, file=paste(outdir,"mss_0",paste(gene_in, "RData", sep="."), sep="/"))
     
     # load(paste(getwd(),src, "../../Results/metabolite_sets_step_0,1,2_filter_1.0/mss_0",paste(hgnc, "RData", sep="."), sep="/"))
     # library(XLConnect)

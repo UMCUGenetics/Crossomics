@@ -1,14 +1,13 @@
 README - Crossomics Metabolite Mapper
 
-02-04-2019 - Marten Kerkhofs
+04-07-2019 - Marten Kerkhofs
 
 
 
-This repository is for all Crossomics Metabolite Mapper scripts. The main script (for now) is GeneMetaboliteMapper_AdductSums.R, which is copied and modified from the similarly named GeneMetaboliteMapper_..._.R files. 
+This repository is for all necessary Crossomics Metabolite Mapper scripts. The data used is in the parent folder (Data) and on the Metab drive in a project specific path. 
 
-Files directly dependent on the main file are getPValues_Marten.R and performMSEA_Marten.R. The getPValues file must be renamed in the near future to represent the fact that it only calculates Z-scores, no P.values.
+The main script is GeneMetaboliteMapper.R. Scripts used by the main script are in the Supportive folder and are: getZValues_11042019.R, MSEA.R, genExcelFileShort.R, sourceDir.R and Generate_av_Z_scores.R. 
+Other scripts do not have any use in the Metabolite_Mapper script and are moved to 'old/unnecessary' folders.
 
-The other files have unknown use for now.
 
-It is made to run on my Mac and some document-paths are hardcoded inside it. 
-Before being able to run it at all, the Metab drive must be loaded.
+
