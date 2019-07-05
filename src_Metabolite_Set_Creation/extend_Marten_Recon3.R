@@ -8,9 +8,12 @@ run <- function(entry, outdir, src){
   
   # reconVersion=2.0
 
-  source(paste(src, "Crossomics/sourceDir.R", sep="/"))
-  sourceDir(paste(src, "Crossomics/build_mets_set", sep="/"))
-  sourceDir(paste(src, "Crossomics", sep="/"))
+  # source(paste(src, "Crossomics/sourceDir.R", sep="/"))
+  # sourceDir(paste(src, "Crossomics/build_mets_set", sep="/"))
+  # sourceDir(paste(src, "Crossomics", sep="/"))
+  
+  source(paste0(code_dir,"/Supportive/sourceDir.R"))
+  sourceDir(paste0(code_dir,"/Supportive"))
   
   # if (reconVersion==2.2){
   #   
@@ -26,17 +29,27 @@ run <- function(entry, outdir, src){
   #   recon2chebi=NULL
   # }
   
-  load(paste(src, "Recon3D.RData", sep="/"))
+  # load(paste(src, "Recon3D.RData", sep="/"))
+  load(paste(src, "../Data/Recon3D.RData", sep="/"))
   model=Recon3D$Recon3D[,,1]
+  # Fix CHEBI: naming, where some Chebi codes are noted like this: "CHEBI:00001" and some like this: "00001"
+  model$metCHEBIID <- rapply(model$metCHEBIID, gsub, pattern = "CHEBI:", replacement = "", ignore.case=TRUE, how = "list")
+  
   recon2chebi=NULL
   
   # message(dim(model$S))
   
-  dir.create(paste(src, "../../Results/mss_0", sep="/"),showWarnings = FALSE)
-  dir.create(paste(src, "../../Results/mss_1", sep="/"),showWarnings = FALSE)
-  dir.create(paste(src, "../../Results/mss_2", sep="/"),showWarnings = FALSE)
-  dir.create(paste(src, "../../Results/mss_3", sep="/"),showWarnings = FALSE)
-  dir.create(paste(src, "../../Results/mss_4", sep="/"),showWarnings = FALSE)
+  # dir.create(paste(src, "../../Results/mss_0", sep="/"),showWarnings = FALSE)
+  # dir.create(paste(src, "../../Results/mss_1", sep="/"),showWarnings = FALSE)
+  # dir.create(paste(src, "../../Results/mss_2", sep="/"),showWarnings = FALSE)
+  # dir.create(paste(src, "../../Results/mss_3", sep="/"),showWarnings = FALSE)
+  # dir.create(paste(src, "../../Results/mss_4", sep="/"),showWarnings = FALSE)
+  
+  dir.create(paste0(outdir, "/mss_0"), showWarnings = FALSE)
+  dir.create(paste0(outdir, "/mss_1"), showWarnings = FALSE)
+  dir.create(paste0(outdir, "/mss_2"), showWarnings = FALSE)
+  dir.create(paste0(outdir, "/mss_3"), showWarnings = FALSE)
+  dir.create(paste0(outdir, "/mss_4"), showWarnings = FALSE)
   
   # load(paste(src, "../../Results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_1", files[i], sep="/"))
   # 
@@ -54,7 +67,8 @@ run <- function(entry, outdir, src){
   # }
 
   # files = list.files(paste(src, "../../Results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_WG_step_0", sep="/"))
-  files = list.files(paste(src, "../../Results/mss", sep="/"))
+  # files = list.files(paste(src, "../../Results/mss", sep="/"))
+  files = list.files(paste(src, "../Data/mss", sep="/"))
   # files = list.files(paste(src, "../../Results/mss_PathwayCommons", sep="/"))
   # SLC7A7: entry=18425
   # grep("SLC7A7", files)
@@ -65,12 +79,13 @@ run <- function(entry, outdir, src){
 
   # load(paste(src, "../../Results/mss_PathwayCommons", files[entry], sep="/"))
   # load(paste(src, "../../Results/metabolite_sets_step_0,1,2,3_1.0_filter_1.1/mss_WG_step_0", files[entry], sep="/"))
-  load(paste(src, "../../Results/mss", files[entry], sep="/"))
+  # load(paste(src, "../../Results/mss", files[entry], sep="/"))
+  load(paste(src, "../Data/mss", files[entry], sep="/"))
   
   if (!is.null(rval)){
     hgnc = unlist(strsplit(files[entry], split = ".", fixed = TRUE))[1]
       
-    findMetabolicEnvironmentLocal(gene_in = hgnc, model = model, recon2chebi = recon2chebi, src = src, rval = rval)
+    findMetabolicEnvironmentLocal(gene_in = hgnc, model = model, recon2chebi = recon2chebi, src = src, outdir = outdir, rval = rval)
   }
   
 }
@@ -81,7 +96,10 @@ message("Start")
 cmd_args = commandArgs(trailingOnly = TRUE)
 
 # TEST code{
-# cmd_args <- c("1", "/Users/mkerkho7/DIMS2_repo/Crossomics/Results", "/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Set_Creation")
+# library("rstudioapi")
+# code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+# # cmd_args <- c("1", "/Users/mkerkho7/DIMS2_repo/Crossomics/Results", "/Users/mkerkho7/DIMS2_repo/Crossomics/src_Metabolite_Set_Creation")
+# cmd_args <- c("2347", "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults", code_dir)
 #}
 
 # for (arg in cmd_args) cat("  ", arg, "\n", sep="")
