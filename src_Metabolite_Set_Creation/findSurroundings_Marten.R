@@ -6,8 +6,8 @@ run <- function(entry, outdir, src){
 # src="/hpc/shared/dbg_mz/marcel/Crossomics_Build_Metabolite_Set/src"
 # outdir="/hpc/shared/dbg_mz/marcel/Crossomics_Build_Metabolite_Set/results"
   
-  source(paste(src, "Crossomics/sourceDir.R", sep="/"))
-  sourceDir(paste(src, "Crossomics/build_mets_set", sep="/"))
+  source(paste(src, "Supportive/sourceDir.R", sep="/"))
+  sourceDir(paste(src, "Supportive/", sep="/"))
   
   dir.create(outdir, showWarnings = F)
   dir.create(paste(outdir, "mss", sep="/"), showWarnings = F)
@@ -20,7 +20,7 @@ run <- function(entry, outdir, src){
 
   # load(paste(src, "HGNC2Uniprot_prev.RData", sep="/"))
   # load(paste(src, "HGNC2Uniprot.RData", sep="/"))
-  HGNC2Uniprot <- readRDS(paste(src, "HGNC2Uniprot20190605.RDS", sep = "/")) # New version, added 06-06-2019
+  HGNC2Uniprot <- readRDS(paste(outdir, "HGNC2Uniprot20190605.RDS", sep = "/")) # New version, added 06-06-2019
   
   cat("HGNC loaded\n") # Check for where the script is
   
@@ -65,7 +65,7 @@ library(bitops)
 cmd_args = commandArgs(trailingOnly = TRUE)
 
 # TEST code{
-# cmd_args <- c("10176", "/Users/mkerkho7/DIMS2_repo/Crossomics/Results", "/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Set_Creation")
+# cmd_args <- c("10736", "/Users/mkerkho7/DIMS2_repo/Crossomics/Data", "/Users/mkerkho7/DIMS2_repo/Crossomics/src_Metabolite_Set_Creation")
 #}
 
 for (arg in cmd_args) cat("  ", arg, "\n", sep="")
