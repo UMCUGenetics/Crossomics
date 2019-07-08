@@ -99,7 +99,7 @@ cmd_args = commandArgs(trailingOnly = TRUE)
 # library("rstudioapi")
 # code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 # # cmd_args <- c("1", "/Users/mkerkho7/DIMS2_repo/Crossomics/Results", "/Users/mkerkho7/DIMS2_repo/Crossomics/src_Metabolite_Set_Creation")
-# cmd_args <- c("2347", "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults", code_dir)
+# cmd_args <- c("2347", "/Users/mkerkho7/DIMS2_repo/Crossomics/Data", code_dir)
 #}
 
 # for (arg in cmd_args) cat("  ", arg, "\n", sep="")
