@@ -92,7 +92,8 @@ getLeftOrRight <- function(uris, entrezgene, label) {
       #   kegg_id = c(kegg_id, NA)
       # }
       if (!length(grep("kegg_compound", xrefs, ignore.case = TRUE))==0){
-        kegg_id = c(kegg_id, strsplit(xrefs[grep("kegg_compound", xrefs, fixed = TRUE)],"_")[[1]][4])
+        # kegg_id = c(kegg_id, strsplit(xrefs[grep("kegg_compound", xrefs, fixed = TRUE)],"_")[[1]][4])
+        kegg_id = c(kegg_id, strsplit(xrefs[grep("kegg_compound", xrefs, ignore.case = TRUE)],"_")[[1]][4])
       } else {
         kegg_id = c(kegg_id, NA)
       }
