@@ -64,12 +64,12 @@ getMetsPathwayCommons <- function(id_uniprot, src){
   try({xml2 = traverse(uri = uris2, path = "BiochemicalReaction/left:SmallMolecule")}, silent = TRUE)
   uris3 = xpathSApply(xml2, "//value/text()", xmlValue)
   if (!is.null(uris3)){
-    leftMets = rbind(leftMets, getLeftOrRight(uris3, entrezgene, "left"))
+    leftMets = rbind(leftMets, getLeftOrRight(uris=uris3, entrezgene, label="left"))
   }
   try({xml2 = traverse(uri = uris2, path = "BiochemicalReaction/right:SmallMolecule")}, silent = TRUE)
   uris3 = xpathSApply(xml2, "//value/text()", xmlValue)
   if (!is.null(uris3)){
-    rightMets = rbind(rightMets, getLeftOrRight(uris3, entrezgene, "right"))
+    rightMets = rbind(rightMets, getLeftOrRight(uris=uris3, entrezgene, label="right"))
   }
 
   # # owl = getPc(uris[2])
