@@ -31,6 +31,7 @@ getPreviousNext <- function(model, met_index, max_rxns, step, path){
     label = "used in: "
 
     # if (length(rxn_index)>0){  
+    # Metabolites present in more than max_rxns reactions are not executed here
     if (max_rxns>=length(rxn_index)&length(rxn_index)>0){ 
       
       # message(paste("Yes",j, met))
@@ -54,7 +55,7 @@ getPreviousNext <- function(model, met_index, max_rxns, step, path){
           begin = path[j]
         }
        
-        rxns=getReactionsRecon(tmp$mets, model)
+        rxns=getReactionsRecon(index = tmp$mets, model)
         mets_sub = cbind(mets_sub, "resource"=rep("Recon",dim(mets_sub)[1]), "rxn_formula"=rxns[,"rxns"], "path"=paste(begin,
                       " =>(", as.vector(unlist(model$rxnNames[rxn_index[k]], use.names = FALSE)),")=>",mets_sub[,"met_long"]))
         mets = rbind(mets, mets_sub)

@@ -71,17 +71,21 @@ removeMetsFromSet <- function(index, model){
   colnames(mets2remove)=c("Name","chebi","kegg","pubchem","inchi")
   
   
-  ind = which(as.vector(unlist(model$metCHEBIID[index]))%in%mets2remove[,"chebi"])
+  # ind = which(as.vector(unlist(model$metCHEBIID[index]))%in%mets2remove[,"chebi"])
+  ind <- which(as.vector(unlist(lapply(model$metCHEBIID[index], paste) %in%mets2remove[,"chebi"])))
   # as.vector(unlist(model$metNames[index[ind]]))
   if (length(ind)>0) index = index[-ind]
   
-  ind = which(as.vector(unlist(model$metKeggID[index]))%in%mets2remove[,"kegg"])
+  # ind = which(as.vector(unlist(model$metKeggID[index]))%in%mets2remove[,"kegg"])
+  ind <- which(as.vector(unlist(lapply(model$metKEGGID[index], paste) %in%mets2remove[,"kegg"])))
   if (length(ind)>0) index = index[-ind]
   
-  ind = which(as.vector(unlist(model$metPubChemID[index]))%in%mets2remove[,"pubchem"])
+  # ind = which(as.vector(unlist(model$metPubChemID[index]))%in%mets2remove[,"pubchem"])
+  ind <- which(as.vector(unlist(lapply(model$metPubChemID[index], paste) %in%mets2remove[,"pubchem"])))
   if (length(ind)>0) index = index[-ind]
 
-  ind = which(as.vector(unlist(model$metInchiString[index]))%in%mets2remove[,"inchi"])
+  # ind = which(as.vector(unlist(model$metInchiString[index]))%in%mets2remove[,"inchi"])
+  ind <- which(as.vector(unlist(lapply(model$metInChIString[index], paste) %in%mets2remove[,"inchi"])))
   if (length(ind)>0) index = index[-ind]
 
   return(index)

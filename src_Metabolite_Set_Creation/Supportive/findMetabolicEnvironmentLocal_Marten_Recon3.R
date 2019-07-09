@@ -161,7 +161,7 @@ findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, outd
     
     result_mets_1 = NULL
     if (length(index_primary_removed)>0) {
-      result_mets_1 = getPreviousNext(model, index_primary_removed, max_rxns, step=1, rep(NA,length(index_primary_removed)))$mets
+      result_mets_1 = getPreviousNext(model, met_index = index_primary_removed, max_rxns, step=1, path = rep(NA,length(index_primary_removed)))$mets
       # B = getPreviousNext(model, index_primary, produced=TRUE, max_rxns, step=1)
     }
     if (is.null(result_mets_1)) result_mets_1 = result_mets  
@@ -223,7 +223,7 @@ findMetabolicEnvironmentLocal <- function(gene_in, model, recon2chebi, src, outd
 
     # step -4,4 ###################################################################################
     index_3 = which(as.vector(unlist(model$mets)) %in% as.vector(result_mets_3[,"met_short"]))
-    index_3_removed = removeMetsFromSet(index_3,model)
+    index_3_removed = removeMetsFromSet(index = index_3,model)
     
     met_short_recon = as.vector(unlist(model$mets[index_3_removed]))
     index_path = NULL
