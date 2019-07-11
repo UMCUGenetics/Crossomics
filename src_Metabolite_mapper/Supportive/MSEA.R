@@ -19,7 +19,7 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   # Get boolean of all HMDB codes indicating exceding either one of the threshold values
   allMetsExcedingThres <- patient_z_values_vector > thresh_F_pos | patient_z_values_vector < thresh_F_neg
   
-  split_names <- strsplit(rownames(Zint_pruned), split = ",")
+  split_names <- strsplit(rownames(av_int_and_z_values_matrix), split = ",")
   # tmp <- strsplit(rownames(metsInset), split = ",")
   
   # Get location of the metaboliteSet metabolites in the intensity/Z-scores matrix.
@@ -41,7 +41,7 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   if(all(is.na(indices))) return(list("p.value"= 1))
   
   # Make single rows of all rows that contain indistinguishable HMDBs.
-  MetSet_short <- cbind(metaboliteSet, "alt_HMDB" = rownames(Zint_pruned)[indices])
+  MetSet_short <- cbind(metaboliteSet, "alt_HMDB" = rownames(av_int_and_z_values_matrix)[indices])
   MetSet_short <- MetSet_short[!is.na(MetSet_short[,"alt_HMDB"]),, drop = FALSE]
   
   newdf <- MetSet_short[!duplicated(MetSet_short[,"alt_HMDB"]),, drop = FALSE]
@@ -57,7 +57,7 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   
   
   index <- names(patient_z_values_vector) %in% newdf[,"alt_HMDB"]
-  metsInset <- data.frame("InSetAboveThres" = allMetsExcedingThres[index])
+  metsInset <- data.frame("InSetExceedingThresh" = allMetsExcedingThres[index])
   if(nrow(metsInset) == 0)   return(list("p.value"= 1))
   
   metNames <- newdf[match(newdf[,"alt_HMDB"], rownames(metsInset)),"met_long"]
@@ -84,9 +84,9 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   # Discard double rows
   metsInset = unique(metsInset, drop=FALSE)
 
-  inSetAboveThresh=sum(metsInset[,"InSetAboveThres"])
-  inSetBelowThresh=sum(!metsInset[,"InSetAboveThres"])
-  notInSetAboveThresh <- sum(allMetsExcedingThres) - inSetAboveThresh
+  InSetExceedingThresh=sum(metsInset[,"InSetExceedingThresh"])
+  inSetBelowThresh=sum(!metsInset[,"InSetExceedingThresh"])
+  notInSetExceedingThresh <- sum(allMetsExcedingThres) - InSetExceedingThresh
   notInSetBelowThresh <- sum(!allMetsExcedingThres) - inSetBelowThresh
   
 
@@ -94,16 +94,16 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   # Fishers exact test ######################################################################
   ###########################################################################################
   enrichment =
-    matrix(c(inSetAboveThresh, inSetBelowThresh, notInSetAboveThresh, notInSetBelowThresh),
+    matrix(c(InSetExceedingThresh, inSetBelowThresh, notInSetExceedingThresh, notInSetBelowThresh),
            nrow = 2,
-           dimnames = list(c("above_thresh", "below_thresh"),c("in_set", "not_in_set")))
+           dimnames = list(c("exceeding_thresh", "below_thresh"),c("in_set", "not_in_set")))
   retVal = fisher.test(enrichment, alternative = "greater")
   p = retVal$p.value
   ###########################################################################################
     
   
   # Code for creating just the metsInset exceding the thresholds
-  metsInset <- metsInset[metsInset$InSetAboveThres,]
+  metsInset <- metsInset[metsInset$InSetExceedingThresh,]
   
   ints <- av_int_and_z_values_matrix[rownames(metsInset), -grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
   z_values <- av_int_and_z_values_matrix[rownames(metsInset), grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
