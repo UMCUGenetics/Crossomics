@@ -28,10 +28,13 @@ library("Cairo")
 library("rstudioapi")
 library("tidyr")
 library("heatmap3")
+library("data.table")
 
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 source(paste0(code_dir,"/Supportive/sourceDir.R"))
 sourceDir(paste0(code_dir,"/Supportive"))
+# path <- "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults"
+path <- paste0(code_dir,"/../Results")
 
 # source("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive/sourceDir.R")
 # sourceDir("/Users/mkerkho7/DIMS2_repo/Crossomics/src/src_Metabolite_Mapper/Supportive")
@@ -89,6 +92,11 @@ for (i in uni_dat_pat){
   Zint_scores <- generate_av_Z_scores(patient = patient)
   rownames(Zint_scores)[nchar(rownames(Zint_scores)) == 9] <- str_replace(rownames(Zint_scores)[nchar(rownames(Zint_scores)) == 9], pattern = "HMDB", replacement = "HMDB00")
   
+  # Remove any metabolites that (for some reason) should not be present
+  # HMDB0002467 <- determined to be non-bodily substances, but created in the lab
+  bad_mets <- c("HMDB0002467")
+  Zint_scores <- Zint_scores[-grep(bad_mets, rownames(Zint_scores)),]
+  
   tmp <- as.data.frame(apply(Zint_scores, 1, paste, collapse = ","))
   colnames(tmp) <- "values"
   tmp <- aggregate(rownames(tmp), by=tmp['values'], paste, collapse = ",")
@@ -103,8 +111,6 @@ for (i in uni_dat_pat){
   # Perform MSEA on all distances -------------------------------------------
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   
-  # path <- "/Users/mkerkho7/DIMS2_repo/TestResults/"
-  path <- paste0(code_dir,"/../Results/")
   thresh_F_pos <- 1.5
   thresh_F_neg <- -1
   top <- 20
@@ -136,7 +142,7 @@ for (i in uni_dat_pat){
     
     # save mock genes + real gene
     patient_folder <- paste(patient, dataset, sep = "_")
-    dir.create(paste(path,"/",patient_folder, sep=""), showWarnings = FALSE)
+    dir.create(paste0(path,"/",patient_folder), showWarnings = FALSE, recursive = TRUE)
     
     # if(save_mock) write.table(genes, file = paste0(path, "/", patient_folder, "/mock_genes_seed",seed,".txt"), row.names = FALSE, col.names = FALSE)
   } else {
@@ -156,7 +162,7 @@ for (i in uni_dat_pat){
     # path2 <- paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/Results/mss_", step)
     overview <- NULL # at the end
     
-    dir.create(paste0(path,step_folder), showWarnings = FALSE)
+    dir.create(paste0(path,"/",step_folder), showWarnings = FALSE)
     
     metSetResult = NULL
     nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
@@ -197,6 +203,16 @@ for (i in uni_dat_pat){
       # Set all NA's to "character (0)" in the ID columns
       metaboliteSet[,c("hmdb","kegg","chebi")][is.na(metaboliteSet[,c("hmdb","kegg","chebi")])] <- "character(0)"
       
+      # Remove any metabolites that are non-informative
+      mets2remove <- as.data.frame(readRDS(paste0(code_dir,"/../Data/mets2remove.RDS")))
+      removeMets <- function(metaboliteSet, mets2remove, identifier){
+        metaboliteSet <- metaboliteSet[!metaboliteSet[,identifier] %in% mets2remove[,identifier],,drop = FALSE]
+        return(metaboliteSet)
+      }
+      for(identifier in c("chebi","kegg","pubchem")){
+        metaboliteSet <- removeMets(metaboliteSet, mets2remove, identifier)
+      }
+      
       # Remove any faulty HMDB codes (they must have 9 characters at this point: the old numbering)
       metaboliteSet[nchar(metaboliteSet[,"hmdb"]) != 9 & metaboliteSet[,"hmdb"] != "character(0)", "hmdb"] <- "character(0)"
       
@@ -205,7 +221,7 @@ for (i in uni_dat_pat){
       
       mapper <- BridgeDbR::loadDatabase(paste0(code_dir,"/../Data/metabolites_20190509.bridge"))
       # mapper <- BridgeDbR::loadDatabase("/Users/mkerkho7/DIMS2_repo/Crossomics/metabolites_20190509.bridge")
-      hmdb <- BridgeDbR::getSystemCode("HMDB")
+      hmdb_id <- BridgeDbR::getSystemCode("HMDB")
       
       getHMDBcode <- function(metaboliteSet, identifier){
         index <- which(metaboliteSet[,"hmdb"] == "character(0)") 
@@ -221,8 +237,8 @@ for (i in uni_dat_pat){
         # Try to fill in empty HMDB IDs via the KEGG ID
         if (length(id) > 0){
           for (k in 1:length(id)){
-            if (!is.null(unlist(BridgeDbR::map(mapper, kegg_chebi, id[k], hmdb)[1]))) {
-              metaboliteSet[index[index.sub[k]],"hmdb"] <- unlist(BridgeDbR::map(mapper, kegg_chebi, id[k], hmdb)[1])
+            if (!is.null(unlist(BridgeDbR::map(mapper, kegg_chebi, id[k], hmdb_id)[1]))) {
+              metaboliteSet[index[index.sub[k]],"hmdb"] <- unlist(BridgeDbR::map(mapper, kegg_chebi, id[k], hmdb_id)[1])
             }
           }
         }
@@ -269,8 +285,12 @@ for (i in uni_dat_pat){
       metaboliteSet[nchar(metaboliteSet[,"hmdb"]) == 9,"hmdb"] <- str_replace(metaboliteSet[nchar(metaboliteSet[,"hmdb"]) == 9,"hmdb"], pattern = "HMDB", replacement = "HMDB00")
       
       # Get rid of any rows that still don't have an hmdb code
-      index = which(metaboliteSet[,"hmdb"] == "character(0)")
+      index <- which(metaboliteSet[,"hmdb"] == "character(0)")
+      if (length(index)>0) metaboliteSet <- metaboliteSet[-index,,drop=FALSE]
+      if (nrow(metaboliteSet) == 0) next
       
+      # Or that do not appear in the dataset
+      index <- which(!as.vector(unlist(lapply(metaboliteSet[,"hmdb"], function(x) length(grep(x, rownames(Zint_pruned))) > 0))))
       if (length(index)>0) metaboliteSet <- metaboliteSet[-index,,drop=FALSE]
       if (nrow(metaboliteSet) == 0) next
       
@@ -279,14 +299,56 @@ for (i in uni_dat_pat){
       # Improved check for same compounds, including if either chebi, kegg or hmdb have duplicated values. Return number of metabolites
       # nMets <- c(nMets, sum(apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = NA), 1, all)))
       
-      
-      
-      # Remove duplicate metabolites (added by Marten)
+      # Remove duplicate metabolites, but collate their data if they are known under different ID's/names
       if(nrow(metaboliteSet) >1){
-        metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = c("character(0)", NA)), 1, all),, drop = FALSE]
+        # metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, duplicated, incomparables = c("character(0)", NA)), 1, all),, drop = FALSE]
+        real_duplicated <- function(set){
+          duplicated(set, incomparables = c("character(0)", NA)) | duplicated(set, fromLast = TRUE, incomparables = c("character(0)", NA))
+        }
+        
+        paste.unique <- function(colname){
+          index <- colname != "character(0)" & colname != "NA" & !is.na(colname)
+          if(sum(index) > 1){
+            paste(unique(tolower(colname[index])), collapse = ", ")
+          } else {
+            tolower(colname[index])
+          }
+        }
+        
+        make.data.table <- function(datatable, identifier){
+          datatable[  , .(rxn_id = toupper(paste.unique(rxn_id)),
+                          step = paste.unique(step),
+                          met_in = paste.unique(met_in),
+                          left_right = paste.unique(left_right),
+                          met_short = paste.unique(met_short),
+                          met_long = paste.unique(met_long),
+                          hmdb = toupper(paste.unique(hmdb)),
+                          kegg = toupper(paste.unique(kegg)),
+                          chebi = paste.unique(chebi),
+                          pubchem = paste.unique(pubchem),
+                          rxn_name= paste.unique(rxn_name),
+                          rxn= paste.unique(rxn),
+                          resource= paste.unique(resource),
+                          rxn_formula= paste.unique(rxn_formula),
+                          path= paste.unique(path)
+          ), 
+          by = identifier]
+        }
+        tmp <- as.data.frame(metaboliteSet[apply(apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, real_duplicated), 1, any),])
+        setDT(tmp)
+        tmp <- make.data.table(tmp, "hmdb")
+        tmp <- make.data.table(tmp, "chebi")
+        metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, real_duplicated), 1, all),]
+        metaboliteSet <- rbind(metaboliteSet, as.matrix(tmp[,-1]))
+        rm(tmp)
       }
       # nMets <- c(nMets,nrow(metaboliteSet))
       
+      # Manual fix for the metabolites known under "HMDB0012482, HMDB0002281" (same, but different in the hmdb dataset)
+      if(length(grep("HMDB0002281", metaboliteSet[,"hmdb"])) | length(grep("HMDB0012482", metaboliteSet[,"hmdb"]))){
+        HMDB_index <- unique(grep("HMDB0002281", metaboliteSet[,"hmdb"]),grep("HMDB0012482", metaboliteSet[,"hmdb"]))
+        metaboliteSet[HMDB_index,"hmdb"] <- "HMDB0002281"
+      }
       
       retVal = performMSEA(metaboliteSet = metaboliteSet, 
                            # av_int_and_z_values_matrix = Zint_scores, 
@@ -307,11 +369,20 @@ for (i in uni_dat_pat){
       if (length(p_value)==0){
         p_value=NA
       }
-      metSetResult <- rbind(metSetResult, c("p.value"=p_value, "patient"=patient, "metabolite.set"=gene_in))
-      
+      # metSetResult <- rbind(metSetResult, c("p.value"=p_value, "patient"=patient, "metabolite.set"=gene_in))
+      # 
+      # nMets <- nrow(metaboliteSet)
+      # tmp <- data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
       nMets <- nrow(metaboliteSet)
-      tmp <- data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-      genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste0(path,step_folder,"/MSEA_results.xls"))
+      metSetResult <- data.frame(rbind(metSetResult, c("metabolite.set"=gene_in, 
+                                            "p.value"=signif(p_value, digits = 5), 
+                                            "mets in set"=nMets, 
+                                            "mets exc thres"=retVal$mets_exc_thres
+                                            )
+                            ), stringsAsFactors = FALSE)
+      
+      # tmp <- data.frame("HGNC"=metSetResult[,"metabolite.set"],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
+      # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste0(path,"/", step_folder,"/MSEA_results.xls"))
       
       # if (!is.null(genes)){
       #   tmp1 = tmp[order(tmp[,"p.value"]),]
@@ -324,6 +395,8 @@ for (i in uni_dat_pat){
       #   overview = rbind(overview, t(tmp1))
       # }
     }
+    genExcelFileShort(list = as.data.frame(metSetResult[order(metSetResult[,"p.value"]),]), 
+                      wbfile = paste0(path,"/", step_folder,"/MSEA_results.xls"))
     cat("\n\n")
   }
 }
