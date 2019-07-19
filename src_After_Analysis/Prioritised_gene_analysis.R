@@ -24,11 +24,11 @@ xls_unique$Patient[nchar(xls_unique$Patient) == 2] <- fixed_patients
 
 DT <- NULL
 
-# patients_done <- c("P03", "P05")
+# patients_not_done <- c("P9.1")
 
 for (i in 1:nrow(xls_unique)){
   patient <- xls_unique$Patient[i]
-  # if (!patient %in% patients_done) next
+  # if (xls_unique$Patient.number[i] %in% patients_not_done) next
   cat("Patient:",patient,"\n")
   dis_gene <- xls_unique$Gene[i]
   dis_gene <- unlist(strsplit(dis_gene, split = "; "))

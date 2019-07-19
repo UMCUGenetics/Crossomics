@@ -44,7 +44,7 @@ if(Variable_Steps){
 
 if(Subset_Of_Patients){
   sample_number <- 4
-  Specific_Patients <- c("P3","P5","P6","P7","P9")
+  Specific_Patients <- c("P64","P65")
 } 
 
 top <- 20
@@ -122,6 +122,8 @@ for (i in uni_dat_pat){
   
   # Get disease gene for patient
   dis_gene <- xls_data$Gene[grepl(patient, xls_data$Patient.number) & xls_data$Dataset == dataset][1]
+  
+  if(dis_gene == "MUT") dis_gene <- "MMUT"
   
   # In the case there are multiple disease genes stated:
   if(grepl(";",dis_gene)){
