@@ -20,13 +20,17 @@
 # Determine variable steps/thresholds -------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+cmd_args <- commandArgs(trailingOnly = TRUE)
+maxrxn <- as.numeric(cmd_args[1])
+
 Variable_Threshold <- TRUE
 Variable_Steps <- TRUE
 Subset_Of_Patients <- TRUE
+# maxrxn <- 15
 
 if(Variable_Threshold){
-  thresh_pos_list <- c(1,1.5,2,3,10)
-  thresh_neg_list <- c(-0.5,-1,-1.5,-3,-10)
+  thresh_pos_list <- c(1,1.5,2,3)
+  thresh_neg_list <- c(-0.5,-1,-1.5,-3)
 } else {
   thresh_pos_list <- 1.5
   thresh_neg_list <- -1
@@ -40,11 +44,16 @@ if(Variable_Steps){
 
 if(Subset_Of_Patients){
   sample_number <- 4
+  Specific_Patients <- c("P3","P5","P6","P7","P9")
 } 
 
 top <- 20
 id <- "hmdb"
 seed = 313
+date <- "2019-07-18"
+
+
+
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Load data ---------------------------------------------------------------
@@ -59,7 +68,13 @@ library("tidyr")
 library("heatmap3")
 library("data.table")
 
-code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+
+if(Sys.getenv("RSTUDIO") == "1") {
+  code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+} else {
+  code_dir <- "/Users/mkerkho7/DIMS2_repo/Crossomics/src_Metabolite_Mapper"
+}
+
 source(paste0(code_dir,"/Supportive/sourceDir.R"))
 sourceDir(paste0(code_dir,"/Supportive"))
 # path <- "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults"
@@ -78,9 +93,16 @@ load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.RData"))
 dat_pat <- paste(xls_data$Dataset, xls_data$Patient.number, sep = "^")
 uni_dat_pat <- unique(sapply(strsplit(dat_pat, split = "\\."), `[`, 1))
 if(Subset_Of_Patients){
-  set.seed(seed = seed)
-  uni_dat_pat <- sample(uni_dat_pat, sample_number)
+  if(length(Specific_Patients) > 0 ) {
+    uni_dat_pat <- uni_dat_pat[unlist(lapply(Specific_Patients, function(x) grep(paste0(x,'$'), uni_dat_pat)))]
+  } else {
+    set.seed(seed = seed)
+    uni_dat_pat <- sample(uni_dat_pat, sample_number)
+  }
 }
+
+
+
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Perform metabolite mapper on all dat_pat -------------------------------
@@ -122,6 +144,11 @@ for (i in uni_dat_pat){
   
   # patient <- paste0("P", str_pad(patient, width = 2, pad = "0"))
   # For this function to work, you need to be in the folder where the patient data is present
+  if(nchar(patient) == 2) {
+    tmp_patient <- unlist(strsplit(patient, split = ""))
+    patient <- paste0(tmp_patient[1],"0",tmp_patient[2])
+  }
+  
   Zint_scores <- generate_av_Z_scores(patient = patient)
   rownames(Zint_scores)[nchar(rownames(Zint_scores)) == 9] <- str_replace(rownames(Zint_scores)[nchar(rownames(Zint_scores)) == 9], pattern = "HMDB", replacement = "HMDB00")
   
@@ -146,7 +173,7 @@ for (i in uni_dat_pat){
 
   # Prepare mock gene set ---------------------------------------------------
   genes <- NULL
-  if (!file.exists(paste0("./db/P",patient,"_HGNC.txt"))){
+  if (!file.exists(paste0("./db/",patient,"_HGNC.txt"))){
     # # For getting random mock genes
     # mock_genes <- read.table(file = paste0(code_dir,"/../Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt"), header = TRUE, sep = "\t", stringsAsFactors = FALSE)
     # # mock_genes <- read.table(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/Data/All_Genes_Ensembl_apr_2019_GRCh38p12_extended.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
@@ -165,13 +192,13 @@ for (i in uni_dat_pat){
     mss <- paste(genes,"RData",sep=".")
     
     # save mock genes + real gene
-    patient_folder <- paste(patient, dataset, sep = "_")
+    patient_folder <- paste0(date,"/", patient, "_", dataset)
     dir.create(paste0(path,"/",patient_folder), showWarnings = FALSE, recursive = TRUE)
     
     # if(save_mock) write.table(genes, file = paste0(path, "/", patient_folder, "/mock_genes_seed",seed,".txt"), row.names = FALSE, col.names = FALSE)
   } else {
     # Real WES ----------------------------------------------------------------
-    mss = read.table(paste0("./db/P",patient,"_HGNC.txt"), header = FALSE, sep="\t")
+    mss = read.table(paste0("./db/",patient,"_HGNC.txt"), header = FALSE, sep="\t")
     mss = as.vector(unlist(mss))
     mss = paste(mss,"RData",sep=".")
   }
@@ -183,9 +210,11 @@ for (i in uni_dat_pat){
     
     for (step in steps){
       cat("step:", step, "\n")
-      step_folder <- paste0(patient_folder,"/thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
+      step_folder <- paste0(patient_folder,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
       
-      path2 <- paste0(code_dir,"/../Data/mss_", step)
+      path2 <- paste0(code_dir,"/../Data/",date,"_maxrxn",maxrxn,"/mss_", step)
+      # path2 <- paste0(code_dir,"/../Data/maxrxn",maxrxn,"/mss_", step)
+      # path2 <- paste0(code_dir,"/../Data/mss_", step)
       # path2 <- paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/Results/mss_", step)
       overview <- NULL # at the end
       
@@ -422,7 +451,8 @@ for (i in uni_dat_pat){
         #   overview = rbind(overview, t(tmp1))
         # }
       }
-      genExcelFileShort(list = as.data.frame(metSetResult[order(metSetResult[,"p.value"]),]), 
+      
+      genExcelFileShort(list = as.data.frame(metSetResult[order(as.numeric(metSetResult[,"p.value"])),]), 
                         wbfile = paste0(path,"/", step_folder,"/MSEA_results.xls"))
       cat("\n\n")
     }
