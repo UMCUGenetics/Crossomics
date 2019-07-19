@@ -155,7 +155,7 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   
   ints=ints[order(ints[,"Z.score"]),]
   
-  genExcelFileShort(as.data.frame(ints), paste(path, "/", patient_folder, "/", gene_in,".xls",sep=""))
+  if(nrow(ints) > 0) genExcelFileShort(as.data.frame(ints), paste(path, "/", patient_folder, "/", gene_in,".xls",sep=""))
   
   return(list("p.value"=p,"mets_exc_thres"=InSetExceedingThresh))
 }
