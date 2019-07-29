@@ -45,15 +45,15 @@
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Load DIMS data ----------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-generate_av_Z_scores <- function(patient){
+generate_av_Z_scores <- function(patient, data_location = "."){
   ## Load DIMS input files, don't know why this is necessary, but it gives a different result than just load()
   loadRData <- function(fileName){
     load(fileName)
     get(ls()[ls() != "fileName"])
   }
   
-  outlist.neg.adducts.HMDB <- loadRData("./adductSums_negative.RData")
-  outlist.pos.adducts.HMDB <- loadRData("./adductSums_positive.RData")
+  outlist.neg.adducts.HMDB <- loadRData(paste0(data_location,"/adductSums_negative.RData"))
+  outlist.pos.adducts.HMDB <- loadRData(paste0(data_location,"/adductSums_positive.RData"))
   
   # This is a check and ensures the column names are in the same order.
   tmp <- intersect(colnames(outlist.neg.adducts.HMDB), colnames(outlist.pos.adducts.HMDB))
