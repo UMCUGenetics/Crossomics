@@ -9,18 +9,18 @@ run <- function(entry, outdir, src){
   source(paste(src, "Supportive/sourceDir.R", sep="/"))
   sourceDir(paste(src, "Supportive/", sep="/"))
   
-  dir.create(outdir, showWarnings = F)
-  dir.create(paste(outdir, "mss", sep="/"), showWarnings = F)
+  # dir.create(outdir, showWarnings = F)
+  dir.create(paste(outdir, "mss", sep="/"), showWarnings = FALSE, recursive = TRUE)
   
-  # entry=which(HGNC2Uniprot[,"hgnc_symbol"]=="SLC7A7")
-
-  # dim(HGNC2Uniprot)
-  # length(unique(HGNC2Uniprot[,"uniprotswissprot"]))
-  # length(unique(HGNC2Uniprot[,"hgnc_symbol"]))
-
   # load(paste(src, "HGNC2Uniprot_prev.RData", sep="/"))
   # load(paste(src, "HGNC2Uniprot.RData", sep="/"))
   HGNC2Uniprot <- readRDS(paste(outdir, "HGNC2Uniprot20190605.RDS", sep = "/")) # New version, added 06-06-2019
+  
+  # entry <- which(HGNC2Uniprot[,"hgnc_symbol"]=="SLC7A7")
+  
+  # dim(HGNC2Uniprot)
+  # length(unique(HGNC2Uniprot[,"uniprotswissprot"]))
+  # length(unique(HGNC2Uniprot[,"hgnc_symbol"]))
   
   cat("HGNC loaded\n") # Check for where the script is
   

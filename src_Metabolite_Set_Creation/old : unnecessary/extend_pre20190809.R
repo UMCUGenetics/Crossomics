@@ -49,26 +49,30 @@ run <- function(entry, outdir, src, fr_max_rxns = NULL, max_rxns = NULL){
                                     rval = rval,
                                     max_rxns = max_rxns
                                     )
-    # }
-  }
+    }
+  # }
 }
 
 message("Start")
 
 
-# library("rstudioapi")
-library("Matrix.utils")
-# code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 
-# TEST CODE
-# load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.RData"))
-# path <- paste0(code_dir,"/../Results")
-# seed <- 313
-# dis_genes <- as.vector(unlist(strsplit(unique(xls_data$Gene), split = "; ")))
-# mock_genes <- scan(file = paste0(path, "/mock_genes_seed",seed,".txt"), what = "character", quiet = TRUE)
-# genes <- c(mock_genes, dis_genes)
-# mss <- paste(genes,"RData",sep=".")
-# if(length(grep("MUT.RData", mss))>0) {mss[grep("MUT.RData", mss)] <- "MMUT.RData"}
+library("Matrix.utils")
+if(Sys.getenv("RSTUDIO") == "1") {
+  library("rstudioapi")
+  code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+  
+  # TEST CODE
+  load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.RData"))
+  path <- paste0(code_dir,"/../Results")
+  seed <- 313
+  genes <- "SLC7A7"
+  dis_genes <- as.vector(unlist(strsplit(unique(xls_data$Gene), split = "; ")))
+  # mock_genes <- scan(file = paste0(path, "/mock_genes_seed",seed,".txt"), what = "character", quiet = TRUE)
+  genes <- c(mock_genes, dis_genes)
+  mss <- paste(genes,"RData",sep=".")
+  if(length(grep("MUT.RData", mss))>0) {mss[grep("MUT.RData", mss)] <- "MMUT.RData"}
+}
 
 # today <- as.character(Sys.Date())
 today <- "2019-07-19"
