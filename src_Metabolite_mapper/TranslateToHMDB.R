@@ -5,10 +5,21 @@ library("BridgeDbR")
 library("stringr")
 
 
-date <- "2019-07-19" # The date of the data/mss_0 etc. runs
+
+date <- "2019-08-12" # The date of the data/mss_0 etc. runs
+steps <- c(0,1,2,3,4,5)
+max_rxns <- c(8,10,12,15,17,19)
+
 
 setwd("/Users/mkerkho7/DIMS2_repo/Crossomics/Data/")
 mss <- list.files("mss")
+if(date >= "2019-08-12") {
+  mss <- paste0(unlist(lapply(strsplit(mss, split = "\\."), function(x) unlist(x)[1])),".RDS")
+  save_as <- "RDS"
+} else {
+  save_as <- "RData"
+}
+
 genes <- unlist(lapply(mss, function(x) strsplit(x,"\\.")[[1]][1]))
 
 
@@ -58,29 +69,38 @@ getHMDBcode <- function(metaboliteSet, identifier){
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 for (j in 1:length(mss)){
-  for(max_rxn_number in c(8,10,12,15)){
+  for(max_rxn_number in max_rxns){
     max_rxn <- paste0("maxrxn",max_rxn_number)
-    for(step in c(0,1,2,3,4)){
-      path2 <- paste0("./",date,"_",max_rxn,"/mss_",step)
-
+    for(step in steps){
+      if (date >= "2019-08-12"){
+        path2 <- paste0("./",date,"/",max_rxn,"/mss_",step)
+      } else {
+        path2 <- paste0("./",date,"_",max_rxn,"/mss_",step)
+      }
       
-      
-      load(paste(path2, mss[j], sep="/"))
+      try((metaboliteSet), silent = TRUE)
+      if(save_as == "RData") {
+        load(paste(path2, mss[j], sep="/"))
+        # result_mets_x is the name of how the RData file is loaded in and depends on the step size.
+        if (step==1){
+          metaboliteSet <- result_mets_1
+        } else if (step==2){
+          metaboliteSet <- result_mets_2
+        } else if (step==3){
+          metaboliteSet <- result_mets_3
+        } else if (step==4){
+          metaboliteSet <- result_mets_4
+        } else {
+          metaboliteSet <- result_mets_0
+        }
+      } else if (save_as == "RDS") {
+        metaboliteSet <- as.matrix(readRDS(paste(path2, mss[j], sep="/")))
+      }
       
       gene_in <- genes[j]
       
-      # result_mets_x is the name of how the RData file is loaded in and depends on the step size.
-      if (step==1){
-        metaboliteSet <- result_mets_1
-      } else if (step==2){
-        metaboliteSet <- result_mets_2
-      } else if (step==3){
-        metaboliteSet <- result_mets_3
-      } else if (step==4){
-        metaboliteSet <- result_mets_4
-      } else {
-        metaboliteSet <- result_mets_0
-      }
+      
+
       
       if(is.vector(metaboliteSet)) { # for when a single metabolite is present (it could be converted to a character vector)
         dimnames <- names(metaboliteSet)
@@ -101,7 +121,12 @@ for (j in 1:length(mss)){
       metaboliteSet[nchar(metaboliteSet[,"hmdb"]) == 9,"hmdb"] <- str_replace(metaboliteSet[nchar(metaboliteSet[,"hmdb"]) == 9,"hmdb"], pattern = "HMDB", replacement = "HMDB00")
       
       dir.create(paste0(path2,"_HMDBtranslated"), showWarnings = FALSE)
-      save(metaboliteSet, file = paste0(path2,"_HMDBtranslated/",mss[j]))
+      if(save_as == "RData"){
+        save(metaboliteSet, file = paste0(path2,"_HMDBtranslated/",mss[j]))
+      } else {
+        saveRDS(metaboliteSet, file = paste0(path2,"_HMDBtranslated/",mss[j]))
+      }
+      
     }
   }
 }

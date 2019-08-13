@@ -76,7 +76,7 @@ if(Subset_Of_Patients){
 
 top <- 20
 id <- "hmdb"
-date_input <- "2019-07-19" # The date of the data/mss_0 etc. runs
+date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
 date_run <- "2019-08-02"
 nr_mocks <- 800
 
@@ -194,8 +194,7 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
     dis_gene <- unlist(strsplit(dis_gene, split = "; "))
     dis_gene <- trimws(dis_gene)
   }
-  mss <- c(mss, dis_gene)
-  mss <- paste0(mss,".RData")
+  
   
   
   data_location <- xls_data$Location[match(dataset, xls_data$Dataset)]
@@ -280,8 +279,25 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
       cat("step:", step, "\n")
       overview <- NULL # at the end
       
-      indir <- paste0("Data/",date_input,"_maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+      if (date_input >= "2019-08-12"){
+        indir <- paste0("Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+      } else {
+        indir <- paste0("Data/",date_input,"_maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+      }
+      
       # patient_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed)
+      
+      # Load in gene file names
+      mss <- c(mss, dis_gene)
+      if (unlist(strsplit(list.files(indir)[1], split = "\\."))[2] == "RData"){
+        saved_as <- "RData"
+        mss <- paste0(mss,".RData")
+      } else if (unlist(strsplit(list.files(indir)[1], split = "\\."))[2] == "RDS"){
+        saved_as <- "RDS"
+        mss <- paste0(mss,".RDS")
+      }
+      
+      
       
       # step_folder <- paste0(patient_folder,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
       step_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
@@ -298,7 +314,13 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
         # Skip the gene if there is no metabolite pathway xls_data available, elsewise, load its file
         if (!file.exists(paste(indir, mss[j], sep="/"))) next
         
-        load(paste(indir, mss[j], sep="/"))
+          # In the new version (12-08-2019) I saved the gene files as RDS files instead of RData
+          if(save_as == "RData"){
+            load(paste(indir, mss[j], sep="/"))
+          } else if (save_as == "RDS"){
+            metaboliteSet <- as.matrix(loadRDS(paste(indir, mss[j], sep="/")))
+          }
+        
         gene_in <- strsplit(mss[j], split = "\\.")[[1]][1]
         
         # The complete metabolitesets like they are loaded here are already named 'metaboliteSet'
