@@ -9,7 +9,7 @@ steps <- c(0,1,2,3,4,5)
 max_rxns <- c(8,10,12,15,17,19)
 
 
-setwd("/Users/mkerkho7/DIMS2_repo/Crossomics_HPC/Data/")
+setwd("/Users/mkerkho7/DIMS2_repo/Crossomics/Data/")
 # mss <- list.files(paste0(date, "_maxrxn8/mss_0_HMDBtranslated/"))
 # if(unlist(strsplit(mss[1], split = "\\."))[2] == "RData"){
 #   save_as <- "RData"
