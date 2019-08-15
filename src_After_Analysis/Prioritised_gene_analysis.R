@@ -16,8 +16,8 @@ library("data.table")
 
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 Z_thresholds <- c("-0.5, 1", "-1, 1.5", "-1.5, 2", "-3, 3")
-max_rxns <- c(8, 10, 12, 15)
-steps <- c(0,1,2,3,4)
+max_rxns <- c(8, 10, 12, 15, 17, 19)
+steps <- c(0,1,2,3,4,5)
 date <- "2019-08-02"
 seeds <- c(2341, 6734892, 83, 698, 991)
 patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")

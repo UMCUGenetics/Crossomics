@@ -144,7 +144,7 @@ sourceDir(paste0(code_dir,"/Supportive"), trace = FALSE)
 load("Data/Crossomics_DBS_Marten_Training.RData")
 
 # Load mock gene set
-mss <- read.table(paste0("./Results/",date_input,"/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+mss <- read.table(paste0("./Results/",date_run,"/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
 
 # Load patient subset
 if (!Subset_Of_Patients){
