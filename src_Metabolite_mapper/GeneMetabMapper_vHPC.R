@@ -7,7 +7,6 @@
 # OS:         macOS Mojave 10.14.6
 # 
 # libraries:
-# heatmap3    1.1.6
 # tidyr       0.8.3
 # rstudioapi  0.10
 # Cairo       1.5-10
@@ -32,7 +31,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
   suppressMessages(library("vctrs",lib.loc = R_location))
   suppressMessages(library("tidyselect",lib.loc = R_location))
   suppressMessages(library("tidyr",lib.loc = R_location))
-  suppressMessages(library("heatmap3",lib.loc = R_location))
+  # suppressMessages(library("heatmap3",lib.loc = R_location))
   suppressMessages(library("data.table",lib.loc = R_location))
   suppressMessages(library("dplyr",lib.loc = R_location))
   
@@ -49,11 +48,11 @@ if(Sys.getenv("RSTUDIO") != "1") {
   library("Cairo")
   library("rstudioapi")
   library("tidyr")
-  library("heatmap3")
+  # library("heatmap3")
   library("data.table")
-  threshold <- 4 # possible 1, 2, 3, 4
-  maxrxn <- 15 # possible: 8, 10, 12, 15
-  step <- 4 # possible 1, 2, 3, 4
+  threshold <- 5 # possible 1, 2, 3, 4, 5
+  maxrxn <- 19 # possible: 8, 10, 12, 15, 17, 19
+  step <- 5 # possible 1, 2, 3, 4, 5
   patient_number <- 29 # possible 1:51
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
   seed <- 6734892
@@ -64,21 +63,22 @@ if(Sys.getenv("RSTUDIO") != "1") {
 # Other variables ---------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Subset_Of_Patients <- FALSE
+Subset_Of_Patients <- TRUE
 
-thresh_pos_list <- c(1,1.5,2,3)
-thresh_neg_list <- c(-0.5,-1,-1.5,-3)
+thresh_pos_list <- c(1,1.5,2,3, 5)
+thresh_neg_list <- c(-0.5,-1,-1.5,-3, -5)
 
-if(Subset_Of_Patients){
-  sample_number <- 4
-  Specific_Patients <- c("P64","P65")
-} 
+# if(Subset_Of_Patients){
+#   sample_number <- 4
+#   Specific_Patients <- c("P64","P65")
+# } 
 
 top <- 20
 id <- "hmdb"
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-08-02"
+date_run <- "2019-08-15" # The date of this run 
 nr_mocks <- 800
+outdir <- "Results/"
 
 # Remove any metabolites that (for some reason) should not be present
 # HMDB0002467 <- determined to be non-bodily substances, but created in the lab
@@ -139,7 +139,7 @@ setwd(paste0(code_dir,"/../"))
 
 source(paste0(code_dir,"/Supportive/sourceDir.R"))
 sourceDir(paste0(code_dir,"/Supportive"), trace = FALSE)
-outdir <- "Results/"
+
 
 load("Data/Crossomics_DBS_Marten_Training.RData")
 
@@ -147,18 +147,22 @@ load("Data/Crossomics_DBS_Marten_Training.RData")
 mss <- read.table(paste0("./Results/",date_input,"/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
 
 # Load patient subset
-uni_dat_pat <- read.table(paste0("./Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
-
-dat_pat <- paste(xls_data$Dataset, xls_data$Patient.number, sep = "^")
-# uni_dat_pat <- unique(sapply(strsplit(dat_pat, split = "\\."), `[`, 1))
-if(Subset_Of_Patients){
-  if(length(Specific_Patients) > 0 ) {
-    uni_dat_pat <- uni_dat_pat[unlist(lapply(Specific_Patients, function(x) grep(paste0(x,'$'), uni_dat_pat)))]
-  } else {
-    set.seed(seed = seed)
-    uni_dat_pat <- sample(uni_dat_pat, sample_number)
-  }
+if (!Subset_Of_Patients){
+  dat_pat <- paste(xls_data$Dataset, xls_data$Patient.number, sep = "^")
+  uni_dat_pat <- unique(sapply(strsplit(dat_pat, split = "\\."), `[`, 1))
+} else {
+  uni_dat_pat <- read.table(paste0("./Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
 }
+
+
+# if(Subset_Of_Patients){
+#   if(length(Specific_Patients) > 0 ) {
+#     uni_dat_pat <- uni_dat_pat[unlist(lapply(Specific_Patients, function(x) grep(paste0(x,'$'), uni_dat_pat)))]
+#   } else {
+#     set.seed(seed = seed)
+#     uni_dat_pat <- sample(uni_dat_pat, sample_number)
+#   }
+# }
 
 # Set which metabolites to remove
 mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
@@ -290,10 +294,10 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
       # Load in gene file names
       mss <- c(mss, dis_gene)
       if (unlist(strsplit(list.files(indir)[1], split = "\\."))[2] == "RData"){
-        saved_as <- "RData"
+        save_as <- "RData"
         mss <- paste0(mss,".RData")
       } else if (unlist(strsplit(list.files(indir)[1], split = "\\."))[2] == "RDS"){
-        saved_as <- "RDS"
+        save_as <- "RDS"
         mss <- paste0(mss,".RDS")
       }
       
@@ -318,7 +322,7 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
           if(save_as == "RData"){
             load(paste(indir, mss[j], sep="/"))
           } else if (save_as == "RDS"){
-            metaboliteSet <- as.matrix(loadRDS(paste(indir, mss[j], sep="/")))
+            metaboliteSet <- as.matrix(readRDS(paste(indir, mss[j], sep="/")))
           }
         
         gene_in <- strsplit(mss[j], split = "\\.")[[1]][1]
