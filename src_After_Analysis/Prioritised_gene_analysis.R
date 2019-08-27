@@ -85,7 +85,7 @@ for(z in c(TRUE, FALSE)){
   if(NoTrans) tmpDT <- DT_noTrans else tmpDT <- DT
   var_name <- ifelse(NoTrans, "NoTrans", "AllGenes")
   
-  DT_prioritised <- NULL
+  DT_per_parameter <- NULL
   # for(maxrxn in max_rxns){
   #   for(threshs in Z_thresholds){
   #     thresh <- unlist(strsplit(threshs, ", "))
@@ -158,31 +158,31 @@ for(z in c(TRUE, FALSE)){
   #                           Av_top50 = av_top50,
   #                           Sd_top50 = sd_top50
   #       )
-  #       DT_prioritised <- rbind(DT_prioritised, varDT)
+  #       DT_per_parameter <- rbind(DT_per_parameter, varDT)
   #     }
   #   }
   # }
-  # DT_prioritised[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
+  # DT_per_parameter[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
   
 #   # return 1 or 0 depending on whether the parameter combination is the best scoring or not
-#   DT_prioritised[,"best40" := ifelse(Prior_frac40 == max(Prior_frac40), 1, 0)]
-#   DT_prioritised[,"best20" := ifelse(Prior_frac20 == max(Prior_frac20), 1, 0)]
-#   DT_prioritised[,"best10" := ifelse(Prior_frac10 == max(Prior_frac10), 1, 0)]
-#   DT_prioritised[,"best5" := ifelse(Prior_frac5 == max(Prior_frac5), 1, 0)]
+#   DT_per_parameter[,"best40" := ifelse(Prior_frac40 == max(Prior_frac40), 1, 0)]
+#   DT_per_parameter[,"best20" := ifelse(Prior_frac20 == max(Prior_frac20), 1, 0)]
+#   DT_per_parameter[,"best10" := ifelse(Prior_frac10 == max(Prior_frac10), 1, 0)]
+#   DT_per_parameter[,"best5" := ifelse(Prior_frac5 == max(Prior_frac5), 1, 0)]
 #   
-#   # DT_prioritised[,"signif40"] <- ifelse(DT_prioritised[,"Prior_frac40"] == max(DT_prioritised[,"Prior_frac40"]),1,0)
-#   # DT_prioritised[,"signif20"] <- ifelse(DT_prioritised[,"Prior_frac20"] == max(DT_prioritised[,"Prior_frac20"]),1,0)
-#   # DT_prioritised[,"signif10"] <- ifelse(DT_prioritised[,"Prior_frac10"] == max(DT_prioritised[,"Prior_frac10"]),1,0)
-#   # DT_prioritised[,"signif5"] <- ifelse(DT_prioritised[,"Prior_frac5"] == max(DT_prioritised[,"Prior_frac5"]),1,0)
-#   DT_prioritised[,"Frac.inTop50" := In_top50/(In_top50+Out_top50)]
+#   # DT_per_parameter[,"signif40"] <- ifelse(DT_per_parameter[,"Prior_frac40"] == max(DT_per_parameter[,"Prior_frac40"]),1,0)
+#   # DT_per_parameter[,"signif20"] <- ifelse(DT_per_parameter[,"Prior_frac20"] == max(DT_per_parameter[,"Prior_frac20"]),1,0)
+#   # DT_per_parameter[,"signif10"] <- ifelse(DT_per_parameter[,"Prior_frac10"] == max(DT_per_parameter[,"Prior_frac10"]),1,0)
+#   # DT_per_parameter[,"signif5"] <- ifelse(DT_per_parameter[,"Prior_frac5"] == max(DT_per_parameter[,"Prior_frac5"]),1,0)
+#   DT_per_parameter[,"Frac.inTop50" := In_top50/(In_top50+Out_top50)]
 #   
-#   DT_tmp <- DT_prioritised[,Av_top50, Frac.inTop50]
+#   DT_tmp <- DT_per_parameter[,Av_top50, Frac.inTop50]
 #   min_values <- unique(head(sort(DT_tmp[Frac.inTop50 >= 0.5, Av_top50]),5))
 #   
-#   DT_prioritised[,"best_av50" := Frac.inTop50 >= 0.5 & Av_top50 %in% min_values]
-#   DT_prioritised[,"best_av50"] <- DT_prioritised$Frac.inTop50 >= 0.5 & DT_prioritised$Av_top50 %in% min_values
-#   # DT_prioritised[best_av50 == TRUE, best_order := order(DT_prioritised[DT_prioritised$best_av50 == TRUE,"Av_top50"])]
-#   DT_prioritised[best_av50 == TRUE, best_order := rank(DT_prioritised[best_av50 == TRUE, Av_top50])]
+#   DT_per_parameter[,"best_av50" := Frac.inTop50 >= 0.5 & Av_top50 %in% min_values]
+#   DT_per_parameter[,"best_av50"] <- DT_per_parameter$Frac.inTop50 >= 0.5 & DT_per_parameter$Av_top50 %in% min_values
+#   # DT_per_parameter[best_av50 == TRUE, best_order := order(DT_per_parameter[DT_per_parameter$best_av50 == TRUE,"Av_top50"])]
+#   DT_per_parameter[best_av50 == TRUE, best_order := rank(DT_per_parameter[best_av50 == TRUE, Av_top50])]
 #   
 # }
   
@@ -209,26 +209,26 @@ DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Prior.frac40","Prior.frac20","Pri
             sum(Prioritised50) # In_top50
             ), by = .(Step, Z_threshold, Max_rxn)]]
 DT_tmp2[, c("Step", "Z_threshold", "Max_rxn","Av_top50","Sd_top50") := DT[Prioritised50 == TRUE, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
-DT_prioritised <- merge(DT_tmp1, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn"))
+DT_per_parameter <- merge(DT_tmp1, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn"))
 rm(DT_tmp1,DT_tmp2)
 
-DT_prioritised[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
+DT_per_parameter[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
 
 # return 1 or 0 depending on whether the parameter combination is the best scoring or not
-DT_prioritised[,c("best40","best20","best10","best5") := list(
+DT_per_parameter[,c("best40","best20","best10","best5") := list(
   ifelse(Prior.frac40 == max(Prior.frac40), 1, 0),
   ifelse(Prior.frac20 == max(Prior.frac20), 1, 0),
   ifelse(Prior.frac10 == max(Prior.frac10), 1, 0),
   ifelse(Prior.frac5 == max(Prior.frac5), 1, 0))]
-DT_prioritised[,"Frac.inTop50" := In_top50/(In_top50+Out_top50)]
+DT_per_parameter[,"Frac.inTop50" := In_top50/(In_top50+Out_top50)]
 
-DT_tmp <- DT_prioritised[,Av_top50, Frac.inTop50]
+DT_tmp <- DT_per_parameter[,Av_top50, Frac.inTop50]
 min_values <- unique(head(sort(DT_tmp[Frac.inTop50 >= 0.5, Av_top50]),5))
 
-DT_prioritised[,"best_av50" := Frac.inTop50 >= 0.5 & Av_top50 %in% min_values]
-DT_prioritised[,"best_av50"] <- DT_prioritised$Frac.inTop50 >= 0.5 & DT_prioritised$Av_top50 %in% min_values
-# DT_prioritised[best_av50 == TRUE, best_order := order(DT_prioritised[DT_prioritised$best_av50 == TRUE,"Av_top50"])]
-DT_prioritised[best_av50 == TRUE, best_order := rank(DT_prioritised[best_av50 == TRUE, Av_top50])]
+DT_per_parameter[,"best_av50" := Frac.inTop50 >= 0.5 & Av_top50 %in% min_values]
+DT_per_parameter[,"best_av50"] <- DT_per_parameter$Frac.inTop50 >= 0.5 & DT_per_parameter$Av_top50 %in% min_values
+# DT_per_parameter[best_av50 == TRUE, best_order := order(DT_per_parameter[DT_per_parameter$best_av50 == TRUE,"Av_top50"])]
+DT_per_parameter[best_av50 == TRUE, best_order := rank(DT_per_parameter[best_av50 == TRUE, Av_top50])]
   
 
 
@@ -357,7 +357,7 @@ try(dev.off(), silent = TRUE)
   
   
   # png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/20190815PriorMissed_noTrans.png", width = 1600, height = 1400)
-  p <- ggplot(DT_prioritised) +
+  p <- ggplot(DT_per_parameter) +
     geom_line(aes(x = Step, y = Prior_frac40, colour = my_palette[4], group = 1)) +
     geom_point(aes(x = Step, y = Prior_frac40, colour = my_palette[4]), size=0.5) +
     # geom_errorbar(aes(x = Step, ymax = Prior_frac40 + Sd_prior40, ymin = Prior_frac40 - Sd_prior40), position = "dodge") +
@@ -375,10 +375,10 @@ try(dev.off(), silent = TRUE)
                        labels = c("Prior 5", "Prior 10", "Prior 20", "Prior 40", "Missed/p=1"),
                        values=c(my_palette[1], my_palette[2], my_palette[3], my_palette[4],'RED'))
   p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = label_both) +
-    geom_point(data = DT_prioritised[DT_prioritised$best40 ==1, ],aes(x=Step, y=Prior_frac40),shape = "*", size=8, show.legend = FALSE, colour = "black") +
-    geom_point(data = DT_prioritised[DT_prioritised$best20 ==1, ],aes(x=Step, y=Prior_frac20),shape = "*", size=8, show.legend = FALSE, colour = "black") +
-    geom_point(data = DT_prioritised[DT_prioritised$best10 ==1, ],aes(x=Step, y=Prior_frac10),shape = "*", size=8, show.legend = FALSE, colour = "black") +
-    geom_point(data = DT_prioritised[DT_prioritised$best5 ==1, ],aes(x=Step, y=Prior_frac5),shape = "*", size=8, show.legend = FALSE, colour = "black")
+    geom_point(data = DT_per_parameter[DT_per_parameter$best40 ==1, ],aes(x=Step, y=Prior_frac40),shape = "*", size=8, show.legend = FALSE, colour = "black") +
+    geom_point(data = DT_per_parameter[DT_per_parameter$best20 ==1, ],aes(x=Step, y=Prior_frac20),shape = "*", size=8, show.legend = FALSE, colour = "black") +
+    geom_point(data = DT_per_parameter[DT_per_parameter$best10 ==1, ],aes(x=Step, y=Prior_frac10),shape = "*", size=8, show.legend = FALSE, colour = "black") +
+    geom_point(data = DT_per_parameter[DT_per_parameter$best5 ==1, ],aes(x=Step, y=Prior_frac5),shape = "*", size=8, show.legend = FALSE, colour = "black")
   try(dev.off(), silent = TRUE)
   # ggsave("/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/20190823PriorMissed_NoTrans.png", plot = p,
   # ggsave("/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/20190823PriorMissed_AllGenes.png", plot = p,
@@ -390,11 +390,11 @@ try(dev.off(), silent = TRUE)
   ###########################################################################
   # Plot of average of top 50 genes -----------------------------------------
   ###########################################################################
-  # DT_prioritised[,"signif40"] <- ifelse(DT_prioritised[,"Prior_frac40"] == max(DT_prioritised[,"Prior_frac40"]),1,0)
+  # DT_per_parameter[,"signif40"] <- ifelse(DT_per_parameter[,"Prior_frac40"] == max(DT_per_parameter[,"Prior_frac40"]),1,0)
   
   my_sig_palette = rev(brewer.pal(6, "RdYlGn"))[2:6]
   
-  p <- ggplot(DT_prioritised, aes(label=Av_top50)) +
+  p <- ggplot(DT_per_parameter, aes(label=Av_top50)) +
     geom_line(aes(x = Step, y = Av_top50, colour = "Average", group = 1)) +
     geom_point(aes(x = Step, y = Av_top50, colour = "Average"), size=0.5) +
     # geom_errorbar(aes(x = Step, ymax = Av_top50 + Sd_top50, ymin = Av_top50 - Sd_top50), position = "dodge") +
@@ -413,10 +413,10 @@ try(dev.off(), silent = TRUE)
                        values=c('Black', 'RED'))
   p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = label_both) +
     labs(y = "Average disease gene rank")
-    # geom_point(data = DT_prioritised[best_av50==TRUE, ],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = "black")+
+    # geom_point(data = DT_per_parameter[best_av50==TRUE, ],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = "black")+
   for(i in c(1:5)){
-    p <- p + geom_point(data = DT_prioritised[as.vector(DT_prioritised[,"best_order"]==i),],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = my_sig_palette[i])
-    p <- p + geom_text(data = DT_prioritised[as.vector(DT_prioritised[,"best_order"]==i),],
+    p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==i),],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = my_sig_palette[i])
+    p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==i),],
                        aes(x=Step, y=Av_top50, label = signif(Av_top50, digits = 5), group = best_order), 
                        size=3, 
                        # show.legend = FALSE, 
