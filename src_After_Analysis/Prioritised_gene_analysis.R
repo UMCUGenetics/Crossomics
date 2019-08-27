@@ -1,153 +1,257 @@
 ###########################################################################
+# Info --------------------------------------------------------------------
+###########################################################################
+
+# This script uses the output of Summarise_MSEA_results.R to generate graphic representations of
+# the Crossomics results
+
+# R version:  3.6.0 (2019-04-26)
+# platform:   x86_64-apple-darwin15.6.0 (64-bit)
+# OS:         macOS Mojave 10.14.6
+# 
+# libraries:
+# rstudioapi    0.10
+# data.table    1.12.2
+# ggplot2       3.1.1
+# RColorBrewer  1.1-2
+# scales        1.0.0
+
+
+###########################################################################
 # Libraries ---------------------------------------------------------------
 ###########################################################################
 
-library("rstudioapi")
-library("Matrix.utils")
-library("data.table")
-
-# library("XLConnect") # Only for older results. Switched to .RData files
-# library("xlsx")
-
-
-###########################################################################
-# Set variables -----------------------------------------------------------
-###########################################################################
-
-code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-Z_thresholds <- c("-0.5, 1", "-1, 1.5", "-1.5, 2", "-3, 3")
-max_rxns <- c(8, 10, 12, 15, 17, 19)
-steps <- c(0,1,2,3,4,5)
-date <- "2019-08-02"
-seeds <- c(2341, 6734892, 83, 698, 991)
-patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
-
-
-###########################################################################
-# Prepare data ------------------------------------------------------------
-###########################################################################
-
-load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.RData"))
-# xls_data <- xlsx::read.xlsx(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.xlsx"), sheetIndex = 1, colIndex = c(1:7), rowIndex = c(1:107), stringsAsFactors = FALSE)
-# save(xls_data, file = paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.RData"))
-
-
-
-# columns to paste together
-xls_data$Patient <- unlist(lapply(xls_data$Patient.number, function(x) unlist(strsplit(x, split = "\\."))[1]))
-cols <- c( 'Dataset' , 'Patient' )
-
-# create a new column `x` with the three columns collapsed together
-xls_unique <- xls_data[!duplicated(apply( xls_data[ , cols ] , 1 , paste , collapse = "_" )),]
-
-# Fix numbering of some patients
-fixed_patients <- unlist(lapply(strsplit(xls_unique$Patient[nchar(xls_unique$Patient) == 2], split = ""), function(x) paste0(x[1],"0",x[2])))
-xls_unique$Patient[nchar(xls_unique$Patient) == 2] <- fixed_patients
-
-DT <- NULL
+library(rstudioapi)
+library(data.table)
+library(RColorBrewer)
+library(ggplot2)
+library(scales)
 
 
 
 ###########################################################################
-# Collate results to 1 data table -----------------------------------------
+# Read data ---------------------------------------------------------------
 ###########################################################################
 
-for (i in 1:nrow(xls_unique)){
-  patient <- xls_unique$Patient[i]
-  prot_func <- xls_unique$Gene.product.function[i]
-  if (length(patients_not_done) > 0){
-    if(xls_unique$Patient.number[i] %in% patients_not_done) next
-  }
-  cat("Patient:",patient,"\n")
-  dis_gene <- xls_unique$Gene[i]
-  dis_gene <- unlist(strsplit(dis_gene, split = "; "))
-  is_trans <- xls_unique$Gene.product.function[i] == "transporter"
-  patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
-  path <- paste0(code_dir,"/../Results/",patient_folder)
-  
-  for(seed in seeds){
+code_dir <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Results/")
+date <- "2019-08-15"
+DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled.RDS")))
 
-    # Check if patient was included in the seed, continue to next one otherwise
-    if(!dir.exists(paste0(path,"/seed",seed))) next
-    
-    for(maxrxn in max_rxns){
-      
-      for(threshs in Z_thresholds){
-        
-        thresh <- unlist(strsplit(threshs, ", "))
-        
-        for(step in steps){
-          
-          # path2 <- paste0(path,"/maxrxn",maxrxn,"_thresh_n",thresh[1],"_p",thresh[2],"_step_",step,"/MSEA_results.xls")
-          # # if(!file.exists(path2)) path2 <- paste0(path,"/maxrxn",maxrxn,"thresh_n",thresh[1],"_p",thresh[2],"_step_",step,"/MSEA_results.xls")
-          # # MSEA_results <- read.xlsx(path2, sheetIndex = 1)
-          # wb <- loadWorkbook(path2)
-          # MSEA_results <- readWorksheet(wb, sheet = 1, startRow = 0, endRow = 0, startCol = 0, endCol = 0)
-          
-          path2 <- paste0(path,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh[1],"_p",thresh[2],"_step_",step,"/MSEA_results.RData")
-          load(path2)
-          MSEA_results <- metSetResult
-          
-          # Take the best scoring (possible) disease gene (when more than 1 is present) or a 'last place' when it is absent
-          if(any(dis_gene %in% MSEA_results$metabolite.set)){
-            dis_pos <- min(unlist(lapply(dis_gene, function(x) grep(x, MSEA_results$metabolite.set))))
-            p.value <- MSEA_results$p.value[dis_pos]
-            if(p.value==1){
-              rank <- nrow(MSEA_results)
-            } else {
-              rank <- frank(MSEA_results$p.value)[dis_pos]
-            }
-          } else {
-            # dis_pos <- nrow(MSEA_results)
-            rank <- nrow(MSEA_results)
-            p.value <- 1
-          }
-          # dis_pos <- grep(dis_gene, MSEA_results$metabolite.set)
-          
-          gene_set <- nrow(MSEA_results)
-          
-          patient_DT <- data.table(Patient = patient,
-                                   Gene = paste(dis_gene,collapse = ";"),
-                                   Protein_function = prot_func,
-                                   Transporter = is_trans,
-                                   Position = rank,
-                                   Total_genes = gene_set,
-                                   # Rev_Pos_frac = 1-((dis_pos-1)/(gene_set-1)),
-                                   Rev_Pos_frac = 1-((rank-1)/(gene_set-1)),
-                                   # Pos_frac = dis_pos/gene_set,
-                                   Pos_frac = rank/gene_set,
-                                   Z_threshold = threshs,
-                                   Step = step,
-                                   Max_rxn = maxrxn,
-                                   P.value = p.value,
-                                   Seed = seed)
-          
-          ###########################################################################
-          # Make datatable of all patients ------------------------------------------
-          ###########################################################################
-          
-          DT <- rbind(DT, patient_DT)
-          
-        }
-      }
-    }
-  }
+
+# temp$size_f = factor(temp$size, levels=c('50%','100%','150%','200%'))
+Z_thresholds <- levels(DT$Z_threshold)
+max_rxns <- levels(DT$Max_rxn)
+steps <- levels(DT$Step)
+subset_patients <- TRUE
+
+if(subset_patients){
+  patients_excluded <- c("P56","P57","P58","P59","P68")
+  DT <- DT[!Patient %in% patients_excluded]
+  sub_name <- "sub_P"
+} else {
+  sub_name <- "all_P"
 }
 
 
+# seeds <- c(2341, 6734892, 83, 698, 991)
+
+
+###########################################################################
+# Create all datatables ---------------------------------------------------
+###########################################################################
+
+###########################################################################
+# Correct / incorrect prioritisation datatable ----------------------------
+###########################################################################
+# gene correctly prioritised?
+DT$Prioritised40 <- DT$Position <= 40
+DT$Prioritised20 <- DT$Position <= 20
+DT$Prioritised10 <- DT$Position <= 10
+DT$Prioritised5 <- DT$Position <= 5
+DT$Prioritised50 <- DT$Position <= 50
+DT[, PatientID:=do.call(paste0,.SD), .SDcols=c("Patient","Gene")]
+
+DT_noTrans <- DT
+DT_noTrans <- DT_noTrans[Transporter==FALSE,,]
+
+outdir_name <- paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/",Sys.Date())
+if (!file.exists(outdir_name))dir.create(outdir_name, recursive = TRUE)
+
+for(z in c(TRUE, FALSE)){
+  NoTrans <- z
+  
+  # tmpDT <- DT_noTrans
+  # tmpDT <- DT
+  if(NoTrans) tmpDT <- DT_noTrans else tmpDT <- DT
+  var_name <- ifelse(NoTrans, "NoTrans", "AllGenes")
+  
+  DT_prioritised <- NULL
+  # for(maxrxn in max_rxns){
+  #   for(threshs in Z_thresholds){
+  #     thresh <- unlist(strsplit(threshs, ", "))
+  #     for(step in steps){
+  #       # There are 255 rows per combination (5seeds * 51 patients/disease genes)
+  #       # # fraction of disease genes in the parameter combination to be in top x (prior = prioritised)
+  #       # prior_frac40 <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised40])
+  #       # prior_frac20 <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised20])
+  #       # prior_frac10 <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised10])
+  #       # prior_frac5 <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised5])
+  #       # prior_av <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Rev_Pos_frac])
+  #       # # fraction of disease genes missed (p=1)
+  #       # missed_dis <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Position==Total_genes])
+  #       # sd_prior40 <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised40])
+  #       # sd_prior20 <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised20])
+  #       # sd_prior10 <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised10])
+  #       # sd_prior5 <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised5])
+  #       # sd_av <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Rev_Pos_frac])
+  #       # sd_missed <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Position==Total_genes])
+  #       # 
+  #       # # Out/inside top x genes:
+  #       # out_top50 <- sum(!tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised50])
+  #       # in_top50 <- sum(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised50])
+  #       # av_top50 <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & Prioritised50, Position])
+  #       # sd_top50 <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & Prioritised50, Position])
+  #       
+  #       DT_var_specific <- tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn]
+  #       # fraction of disease genes in the parameter combination to be in top x (prior = prioritised)
+  #       prior_frac40 <- mean(DT_var_specific[, Prioritised40])
+  #       prior_frac20 <- mean(DT_var_specific[, Prioritised20])
+  #       prior_frac10 <- mean(DT_var_specific[, Prioritised10])
+  #       prior_frac5 <- mean(DT_var_specific[, Prioritised5])
+  #       prior_av <- mean(DT_var_specific[, Rev_Pos_frac])
+  #       # fraction of disease genes missed (p=1)
+  #       missed_dis <- mean(DT_var_specific[, Position==Total_genes])
+  #       sd_prior40 <- sd(DT_var_specific[, Prioritised40])
+  #       sd_prior20 <- sd(DT_var_specific[, Prioritised20])
+  #       sd_prior10 <- sd(DT_var_specific[, Prioritised10])
+  #       sd_prior5 <- sd(DT_var_specific[, Prioritised5])
+  #       sd_av <- sd(DT_var_specific[, Rev_Pos_frac])
+  #       sd_missed <- sd(DT_var_specific[, Position==Total_genes])
+  #       
+  #       # Out/inside top x genes:
+  #       out_top50 <- sum(!DT_var_specific[, Prioritised50])
+  #       in_top50 <- sum(DT_var_specific[, Prioritised50])
+  #       av_top50 <- mean(DT_var_specific[Prioritised50 == TRUE, Position])
+  #       sd_top50 <- sd(DT_var_specific[Prioritised50 == TRUE, Position])
+  #       
+  #       varDT <- data.table(Z_threshold = threshs,
+  #                           Step = step,
+  #                           Max_rxn = maxrxn,
+  #                           
+  #                           Prior_frac40 = prior_frac40,
+  #                           Prior_frac20 = prior_frac20,
+  #                           Prior_frac10 = prior_frac10,
+  #                           Prior_frac5 = prior_frac5,
+  #                           Sd_prior40 = sd_prior40,
+  #                           Sd_prior20 = sd_prior20,
+  #                           Sd_prior10 = sd_prior10,
+  #                           Sd_prior5 = sd_prior5,
+  #                           
+  #                           Prior_av = prior_av,
+  #                           Sd_av = sd_av,
+  #                           
+  #                           Missed_frac = missed_dis,
+  #                           Sd_missed = sd_missed,
+  #                           
+  #                           Out_top50 = out_top50,
+  #                           In_top50 = in_top50,
+  #                           Av_top50 = av_top50,
+  #                           Sd_top50 = sd_top50
+  #       )
+  #       DT_prioritised <- rbind(DT_prioritised, varDT)
+  #     }
+  #   }
+  # }
+  # DT_prioritised[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
+  
+#   # return 1 or 0 depending on whether the parameter combination is the best scoring or not
+#   DT_prioritised[,"best40" := ifelse(Prior_frac40 == max(Prior_frac40), 1, 0)]
+#   DT_prioritised[,"best20" := ifelse(Prior_frac20 == max(Prior_frac20), 1, 0)]
+#   DT_prioritised[,"best10" := ifelse(Prior_frac10 == max(Prior_frac10), 1, 0)]
+#   DT_prioritised[,"best5" := ifelse(Prior_frac5 == max(Prior_frac5), 1, 0)]
+#   
+#   # DT_prioritised[,"signif40"] <- ifelse(DT_prioritised[,"Prior_frac40"] == max(DT_prioritised[,"Prior_frac40"]),1,0)
+#   # DT_prioritised[,"signif20"] <- ifelse(DT_prioritised[,"Prior_frac20"] == max(DT_prioritised[,"Prior_frac20"]),1,0)
+#   # DT_prioritised[,"signif10"] <- ifelse(DT_prioritised[,"Prior_frac10"] == max(DT_prioritised[,"Prior_frac10"]),1,0)
+#   # DT_prioritised[,"signif5"] <- ifelse(DT_prioritised[,"Prior_frac5"] == max(DT_prioritised[,"Prior_frac5"]),1,0)
+#   DT_prioritised[,"Frac.inTop50" := In_top50/(In_top50+Out_top50)]
+#   
+#   DT_tmp <- DT_prioritised[,Av_top50, Frac.inTop50]
+#   min_values <- unique(head(sort(DT_tmp[Frac.inTop50 >= 0.5, Av_top50]),5))
+#   
+#   DT_prioritised[,"best_av50" := Frac.inTop50 >= 0.5 & Av_top50 %in% min_values]
+#   DT_prioritised[,"best_av50"] <- DT_prioritised$Frac.inTop50 >= 0.5 & DT_prioritised$Av_top50 %in% min_values
+#   # DT_prioritised[best_av50 == TRUE, best_order := order(DT_prioritised[DT_prioritised$best_av50 == TRUE,"Av_top50"])]
+#   DT_prioritised[best_av50 == TRUE, best_order := rank(DT_prioritised[best_av50 == TRUE, Av_top50])]
+#   
+# }
+  
+# New version of creating the complete datatable without for loops, using the power of data.table:
+DT_tmp1 <- data.table()
+DT_tmp2 <- data.table()
+DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Prior.frac40","Prior.frac20","Prior.frac10","Prior.frac5","Prior.pos.frac.av","Missed","Missed.frac",
+            "Prior.sd40", "Prior.sd20", "Prior.sd10", "Prior.sd5","Prior.pos.frac.sd","Missed.sd", "Out_top50", "In_top50") := 
+          DT[, list(
+            mean(Prioritised40), # Prior.frac40
+            mean(Prioritised20), # Prior.frac20
+            mean(Prioritised10), # Prior.frac10
+            mean(Prioritised5), # Prior.frac5
+            mean(Rev_Pos_frac), # Prior.pos.frac.av
+            sum(P.value==1), # Missed
+            mean(P.value==1), # Missed.frac
+            sd(Prioritised40), # Prior.sd40
+            sd(Prioritised20), # Prior.sd20
+            sd(Prioritised10), # Prior.sd10
+            sd(Prioritised5), # Prior.sd5
+            sd(Rev_Pos_frac), # Prior.pos.frac.sd
+            sd(Position==Total_genes), # Missed.sd
+            sum(!Prioritised50), # Out_top50
+            sum(Prioritised50) # In_top50
+            ), by = .(Step, Z_threshold, Max_rxn)]]
+DT_tmp2[, c("Step", "Z_threshold", "Max_rxn","Av_top50","Sd_top50") := DT[Prioritised50 == TRUE, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
+DT_prioritised <- merge(DT_tmp1, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn"))
+rm(DT_tmp1,DT_tmp2)
+
+DT_prioritised[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
+
+# return 1 or 0 depending on whether the parameter combination is the best scoring or not
+DT_prioritised[,c("best40","best20","best10","best5") := list(
+  ifelse(Prior.frac40 == max(Prior.frac40), 1, 0),
+  ifelse(Prior.frac20 == max(Prior.frac20), 1, 0),
+  ifelse(Prior.frac10 == max(Prior.frac10), 1, 0),
+  ifelse(Prior.frac5 == max(Prior.frac5), 1, 0))]
+DT_prioritised[,"Frac.inTop50" := In_top50/(In_top50+Out_top50)]
+
+DT_tmp <- DT_prioritised[,Av_top50, Frac.inTop50]
+min_values <- unique(head(sort(DT_tmp[Frac.inTop50 >= 0.5, Av_top50]),5))
+
+DT_prioritised[,"best_av50" := Frac.inTop50 >= 0.5 & Av_top50 %in% min_values]
+DT_prioritised[,"best_av50"] <- DT_prioritised$Frac.inTop50 >= 0.5 & DT_prioritised$Av_top50 %in% min_values
+# DT_prioritised[best_av50 == TRUE, best_order := order(DT_prioritised[DT_prioritised$best_av50 == TRUE,"Av_top50"])]
+DT_prioritised[best_av50 == TRUE, best_order := rank(DT_prioritised[best_av50 == TRUE, Av_top50])]
+  
 
 
 
-# To be in separate script
+
+
+
+
+
+
+
+
+
+
 ###########################################################################
 # Make plot of effectiveness of variables ---------------------------------
 ###########################################################################
 
-# DT$Z_threshold_order <- factor(DT$Z_threshold, levels = Z_thresholds)
-DT[, Z_threshold:=as.factor(Z_threshold)]
-DT[, Protein_function:=as.factor(Protein_function)]
 
-library(ggplot2)
+
+# Violin plots of relative rank -------------------------------------------
+
+
 # p <- ggplot(DT, aes(x=Z_threshold, y=Pos_frac, color=as.factor(Max_rxn))) +
 p <- ggplot(DT, aes(x=Z_threshold, y=Pos_frac, color=Protein_function)) +
   geom_boxplot() + 
@@ -168,9 +272,9 @@ p <- ggplot(DT, aes(x = factor(Step), y = Rev_Pos_frac, fill = Transporter)) +
 #   scale_x_discrete(name ="Z-value threshold")
   
   
-png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/AllPars.png", width = 1200, height = 800, res=1200)
+# png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/AllPars.png", width = 1200, height = 800, res=1200)
 p + facet_grid(Max_rxn ~ Z_threshold, labeller = label_both)
-dev.off()
+try(dev.off(), silent = TRUE)
 ggsave("/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/AllPars.png", 
        width = 300, height = 200, dpi=600, units = "mm")
 
@@ -192,14 +296,14 @@ p <- ggplot(DT_small, aes(x = factor(Step), y = Rev_Pos_frac, fill = Gene)) +
   theme_linedraw()
 png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/AllParsNoTransporters.png", width = 2000, height = 2000)
 p + facet_grid(Max_rxn ~ Z_threshold)
-dev.off()
+try(dev.off(), silent = TRUE)
 
 png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/ByProtFunc.png", width = 800, height = 400)
 ggplot(DT, aes(x = factor(Step), y = Rev_Pos_frac, fill = Protein_function)) +
   # geom_dotplot(binaxis = "y", stackdir = "center", binwidth = 0.008) +
   geom_boxplot() +
   theme_dark()
-dev.off()
+try(dev.off(), silent = TRUE)
 
 DT_small$Z_threshold_order <- factor(DT_small$Z_threshold, levels = Z_thresholds)
 
@@ -228,7 +332,7 @@ extent <- with(built$layout$panel_params[[1]], abs(c(diff(x.range), diff(y.range
 DT_small$ytext <- point.pos$y
 DT_small$xtext <- point.pos$x
 
-dev.off()
+try(dev.off(), silent = TRUE)
 png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/testRplotsmallstep3.png", width = 500, height = 1200)
 q <- ggplot(DT_small, aes(x = factor(Step), y = Pos_frac)) +
   geom_dotplot(binaxis = "y", binwidth = bw, stackdir = 'center') +
@@ -240,124 +344,217 @@ q <- ggplot(DT_small, aes(x = factor(Step), y = Pos_frac)) +
   scale_x_discrete(name ="Step") +
   geom_violin(alpha = 0.1)
 q + facet_grid(Max_rxn ~ .)
-dev.off()
+try(dev.off(), silent = TRUE)
 
 
-###########################################################################
-# Correct / incorrect prioritisation datatable ----------------------------
-###########################################################################
-# gene correctly prioritised?
-DT$Prioritised40 <- DT$Position <= 40
-DT$Prioritised20 <- DT$Position <= 20
-DT$Prioritised10 <- DT$Position <= 10
-DT$Prioritised5 <- DT$Position <= 5
 
-DT_noTrans <- DT[!DT$Transporter]
-
-tmpDT <- DT
-
-DT_prioritised <- NULL
-for(maxrxn in max_rxns){
-  for(threshs in Z_thresholds){
-    thresh <- unlist(strsplit(threshs, ", "))
-    for(step in steps){
-      prior_frac40 <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised40])
-      prior_frac20 <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised20])
-      prior_frac10 <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised10])
-      prior_frac5 <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised5])
-      prior_av <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Rev_Pos_frac])
-      missed_dis <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Position==Total_genes])
-      sd_prior40 <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised40])
-      sd_prior20 <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised20])
-      sd_prior10 <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised10])
-      sd_prior5 <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Prioritised5])
-      sd_av <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Rev_Pos_frac])
-      sd_missed <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn, Position==Total_genes])
-      varDT <- data.table(Z_threshold = threshs,
-                          Step = step,
-                          Max_rxn = maxrxn,
-                          Prior_frac40 = prior_frac40,
-                          Prior_frac20 = prior_frac20,
-                          Prior_frac10 = prior_frac10,
-                          Prior_frac5 = prior_frac5,
-                          Sd_prior40 = sd_prior40,
-                          Sd_prior20 = sd_prior20,
-                          Sd_prior10 = sd_prior10,
-                          Sd_prior5 = sd_prior5,
-                          Prior_av = prior_av,
-                          
-                          Missed_frac = missed_dis,
-                          Sd_missed = sd_missed
-                          )
-      DT_prioritised <- rbind(DT_prioritised, varDT)
+  ###########################################################################
+  # Combination plot of correctly prioritised and missed genes --------------
+  ###########################################################################
+  
+  # Colour scheme to use in comparison plots
+  my_palette = rev(brewer.pal(5, "Greens"))[c(2:5)]
+  
+  
+  # png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/20190815PriorMissed_noTrans.png", width = 1600, height = 1400)
+  p <- ggplot(DT_prioritised) +
+    geom_line(aes(x = Step, y = Prior_frac40, colour = my_palette[4], group = 1)) +
+    geom_point(aes(x = Step, y = Prior_frac40, colour = my_palette[4]), size=0.5) +
+    # geom_errorbar(aes(x = Step, ymax = Prior_frac40 + Sd_prior40, ymin = Prior_frac40 - Sd_prior40), position = "dodge") +
+    geom_line(aes(x = Step, y = Prior_frac20, colour = my_palette[3], group = 1)) +
+    geom_point(aes(x = Step, y = Prior_frac20, colour = my_palette[3]), size=0.5) +
+    geom_line(aes(x = Step, y = Prior_frac10, colour = my_palette[2], group = 1)) +
+    geom_point(aes(x = Step, y = Prior_frac10, colour = my_palette[2]), size=0.5) +
+    geom_line(aes(x = Step, y = Prior_frac5, colour = my_palette[1], group = 1)) +
+    geom_point(aes(x = Step, y = Prior_frac5, colour = my_palette[1]), size=0.5) +
+    geom_line(aes(x = Step, y = Missed_frac, color = "Red", group = 1)) +
+    geom_point(aes(x = Step, y = Missed_frac, colour = "Red"), size=0.5) +
+    theme_dark() + ylab("Frac. of Total") +
+    # scale_color_discrete(name = "Series", labels = c("Prior 40", "Prior 20", "Prior 10", "Prior 5", "Missed"))+ 
+    scale_color_manual(name = "Frac. Series", 
+                       labels = c("Prior 5", "Prior 10", "Prior 20", "Prior 40", "Missed/p=1"),
+                       values=c(my_palette[1], my_palette[2], my_palette[3], my_palette[4],'RED'))
+  p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = label_both) +
+    geom_point(data = DT_prioritised[DT_prioritised$best40 ==1, ],aes(x=Step, y=Prior_frac40),shape = "*", size=8, show.legend = FALSE, colour = "black") +
+    geom_point(data = DT_prioritised[DT_prioritised$best20 ==1, ],aes(x=Step, y=Prior_frac20),shape = "*", size=8, show.legend = FALSE, colour = "black") +
+    geom_point(data = DT_prioritised[DT_prioritised$best10 ==1, ],aes(x=Step, y=Prior_frac10),shape = "*", size=8, show.legend = FALSE, colour = "black") +
+    geom_point(data = DT_prioritised[DT_prioritised$best5 ==1, ],aes(x=Step, y=Prior_frac5),shape = "*", size=8, show.legend = FALSE, colour = "black")
+  try(dev.off(), silent = TRUE)
+  # ggsave("/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/20190823PriorMissed_NoTrans.png", plot = p,
+  # ggsave("/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/20190823PriorMissed_AllGenes.png", plot = p,
+  ggsave(paste0(outdir_name,"/PriorMissed_",var_name,"_",sub_name,".png"), plot = p,
+         width = 300, height = 200, dpi=600, units = "mm")
+  
+  
+  
+  ###########################################################################
+  # Plot of average of top 50 genes -----------------------------------------
+  ###########################################################################
+  # DT_prioritised[,"signif40"] <- ifelse(DT_prioritised[,"Prior_frac40"] == max(DT_prioritised[,"Prior_frac40"]),1,0)
+  
+  my_sig_palette = rev(brewer.pal(6, "RdYlGn"))[2:6]
+  
+  p <- ggplot(DT_prioritised, aes(label=Av_top50)) +
+    geom_line(aes(x = Step, y = Av_top50, colour = "Average", group = 1)) +
+    geom_point(aes(x = Step, y = Av_top50, colour = "Average"), size=0.5) +
+    # geom_errorbar(aes(x = Step, ymax = Av_top50 + Sd_top50, ymin = Av_top50 - Sd_top50), position = "dodge") +
+    # geom_line(aes(x = Step, y = Out_top50/4, colour = "Red", group = 1)) +
+    # geom_point(aes(x = Step, y = Out_top50/4, colour = "Red"), size=0.5) +
+    # geom_line(aes(x = Step, y = In_top50/4, colour = my_palette[1], group = 1)) +
+    # geom_point(aes(x = Step, y = In_top50/4, colour = my_palette[1]), size=0.5) +
+    geom_line(aes(x = Step, y = In_top50/(In_top50+Out_top50)*40, colour = "Frac.InTop", group = 1)) +
+    geom_point(aes(x = Step, y = In_top50/(In_top50+Out_top50)*40, colour = "Frac.InTop"), size=0.5) +
+    scale_y_continuous(limits = c(0,40), sec.axis = sec_axis(~./40, name = "Frac. genes in top 50")) +
+    # geom_line(aes(x = Step, y = In_top50, colour = my_palette[3], group = 1)) +
+    # geom_point(aes(x = Step, y = In_top50, colour = my_palette[3]), size=0.5) +
+    theme_dark() +
+    scale_color_manual(name = "Legend",
+                       labels = c("Av. rank of top 50", "Frac. in top 50"),
+                       values=c('Black', 'RED'))
+  p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = label_both) +
+    labs(y = "Average disease gene rank")
+    # geom_point(data = DT_prioritised[best_av50==TRUE, ],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = "black")+
+  for(i in c(1:5)){
+    p <- p + geom_point(data = DT_prioritised[as.vector(DT_prioritised[,"best_order"]==i),],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = my_sig_palette[i])
+    p <- p + geom_text(data = DT_prioritised[as.vector(DT_prioritised[,"best_order"]==i),],
+                       aes(x=Step, y=Av_top50, label = signif(Av_top50, digits = 5), group = best_order), 
+                       size=3, 
+                       # show.legend = FALSE, 
+                       colour = my_sig_palette[i],
+                       position = position_dodge(width = 2),
+                       vjust = -0.5)
+  }
+   
+  p <- p + geom_hline(yintercept=20, linetype="dashed", color = "darksalmon")
+  
+  try(dev.off(), silent = TRUE)
+  # ggsave("/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/20190823Top50_NoTrans.png", plot = p,
+  # ggsave("/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/20190823Top50_AllGenes.png", plot = p,
+  #        width = 300, height = 200, dpi=600, units = "mm")
+  ggsave(paste0(outdir_name,"/Top50_",var_name,"_",sub_name,".png"), plot = p,
+         width = 300, height = 200, dpi=600, units = "mm")
+  
+  
+  
+  
+  ###########################################################################
+  # Standard deviations of disease gene rank per patient --------------------
+  ###########################################################################
+  
+  # DT[, PatientID:=do.call(paste0,.SD), .SDcols=c("Patient","Gene")]
+  
+  if(NoTrans) tmpDT <- DT_noTrans else tmpDT <- DT
+  
+  # patients <- as.vector(unique(DT$PatientID))
+  patients <- as.vector(unique(tmpDT$PatientID))
+  
+  
+  DT_per_patient <- NULL
+  for(maxrxn in max_rxns){
+    for(threshs in Z_thresholds){
+      thresh <- unlist(strsplit(threshs, ", "))
+      for(step in steps){
+        for(patient in patients){
+          varDT <- NULL
+          DT_var_specific <- tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient]
+          # There should be 9180 rows (6 steps * 5 thresholds * 6 maxrxns * 51 patients/disease genes)
+          # av_rank <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, Position])
+          # min_rank <- min(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, Position])
+          # max_rank <- max(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, Position])
+          # missed <- sum(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, P.value] == 1)
+          # out_top50 <- sum(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, Position] >= 50)
+          # sd_rank <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, Position])
+          # av_rel_rank <- mean(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, Rev_Pos_frac])
+          # sd_rel_rank <- sd(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, Rev_Pos_frac])
+          # transporter <- unique(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, Transporter])
+          # P.value_check <- length(unique(tmpDT[Step==step & Z_threshold==threshs & Max_rxn==maxrxn & PatientID == patient, P.value]))==1
+          
+          av_rank <- mean(DT_var_specific[, Position])
+          min_rank <- min(DT_var_specific[, Position])
+          max_rank <- max(DT_var_specific[, Position])
+          missed <- sum(DT_var_specific[, P.value] == 1)
+          out_top50 <- sum(DT_var_specific[, Position] >= 50)
+          sd_rank <- sd(DT_var_specific[, Position])
+          av_rel_rank <- mean(DT_var_specific[, Rev_Pos_frac])
+          sd_rel_rank <- sd(DT_var_specific[, Rev_Pos_frac])
+          transporter <- unique(DT_var_specific[, Transporter])
+          P.value_check <- length(unique(DT_var_specific[, P.value]))==1
+          
+          max_total_genes <- max(DT_var_specific[, Total_genes])
+          min_total_genes <- min(DT_var_specific[, Total_genes])
+          
+          varDT <- data.table(Av_rank = av_rank,
+                              Min_rank = min_rank,
+                              Max_rank = max_rank,
+                              Missed = missed,
+                              Out_top50 = out_top50,
+                              
+                              Max_tot_gen = max_total_genes,
+                              Min_tot_gen = min_total_genes,
+                              
+                              Sd_rank = sd_rank,
+                              Av_Rel_rank = av_rel_rank,
+                              Sd_Rel_rank = sd_rel_rank,
+                              
+                              Patient_ID = patient,
+                              Z_threshold = threshs,
+                              Step = step,
+                              Max_rxn = maxrxn, 
+                              Transporter = transporter, 
+                              P.value_check = P.value_check)
+  
+          DT_per_patient <- rbind(DT_per_patient, varDT)
+          
+        }
+      }
     }
   }
+  DT_per_patient[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
+  DT_per_patient[DT_per_patient$Missed == 5, Sd_rank := -1]
+  
+  # DT_per_patient[, Colour := ifelse(DT_per_patient[,Transporter], "Red","Black")]
+  
+  # p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_rank, fill = Patient_ID)) +
+  #   geom_bar(position = "dodge", stat="identity") +
+  #   facet_grid(Max_rxn ~ Z_threshold, labeller = label_both)
+  # ggsave(paste0(outdir_name,"/Sd_rank_PerPatient_",var_name,".png"), plot = p,
+  #        width = 300, height = 200, dpi=600, units = "mm")
+  # 
+  # p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_Rel_rank, fill = Patient_ID)) +
+  #   geom_bar(position = "dodge", stat="identity") +
+  #   facet_grid(Max_rxn ~ Z_threshold, labeller = label_both)
+  # ggsave(paste0(outdir_name,"/Sd_Rel_rank_PerPatient_",var_name,".png"), plot = p,
+  #        width = 300, height = 200, dpi=600, units = "mm")
+  
+  
+  DT_per_parameter <- DT_per_patient[,sum(Missed > 0), by = c("Step","Max_rxn", "Z_threshold")]
+  names(DT_per_parameter)[4] <- "Tot.Missed"
+  
+  p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_rank)) +
+    geom_bar(position = "dodge", stat="identity", aes(fill = Patient_ID)) +
+    geom_line(data = DT_per_parameter, aes(x = Step, y = Tot.Missed/4, group = 1, colour = "Genes Missed")) +
+    scale_y_continuous(sec.axis = sec_axis(~.*4, name = "Tot.Genes Missed")) +
+    facet_grid(Max_rxn ~ Z_threshold, labeller = label_both)
+  ggsave(paste0(outdir_name,"/Sd_rank_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+         width = 300, height = 200, dpi=600, units = "mm")
+  
+  p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_Rel_rank)) +
+    geom_bar(position = "dodge", stat="identity", aes(fill = Patient_ID)) +
+    geom_line(data = DT_per_parameter, aes(x = Step, y = Tot.Missed/800, group = 1, colour = "Genes Missed")) +
+    scale_y_continuous(sec.axis = sec_axis(~.*800, name = "Tot.Genes Missed")) +
+    facet_grid(Max_rxn ~ Z_threshold, labeller = label_both) 
+  ggsave(paste0(outdir_name,"/Sd_Rel_rank_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+         width = 300, height = 200, dpi=600, units = "mm")
+  
 }
 
+p <- ggplot(data = DT_per_patient, aes(x = Step, y = Av_Rel_rank)) +
+  geom_bar(position = "dodge", stat="identity", aes(fill = Patient_ID)) +
+  # theme(axis.text.x = element_text(angle = 90))
+  geom_line(data = DT_per_patient, aes(x = Step, y = Av_Rel_rank, group = 1, colour = "Genes Missed")) +
+  # geom_line(data = DT_per_parameter, aes(x = Step, y = Tot.Missed/4, group = 1, colour = "Genes Missed")) +
+  # scale_y_continuous(sec.axis = sec_axis(~.*4, name = "Tot.Genes Missed")) +
+  facet_grid(Max_rxn ~ Z_threshold, labeller = label_both)
+ggsave(paste0(outdir_name,"/Av_Rel_rank_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+       width = 300, height = 200, dpi=600, units = "mm")
 
-###########################################################################
-# Combination plot of correctly prioritised and missed genes --------------
-###########################################################################
-library(RColorBrewer)
-my_palette = rev(brewer.pal(5, "Greens"))[c(2:5)]
-
-DT_prioritised[,"signif40"] <- ifelse(DT_prioritised[,"Prior_frac40"] == max(DT_prioritised[,"Prior_frac40"]),1,0)
-DT_prioritised[,"signif20"] <- ifelse(DT_prioritised[,"Prior_frac20"] == max(DT_prioritised[,"Prior_frac20"]),1,0)
-DT_prioritised[,"signif10"] <- ifelse(DT_prioritised[,"Prior_frac10"] == max(DT_prioritised[,"Prior_frac10"]),1,0)
-DT_prioritised[,"signif5"] <- ifelse(DT_prioritised[,"Prior_frac5"] == max(DT_prioritised[,"Prior_frac5"]),1,0)
-
-
-png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/PriorMissed.png", width = 1600, height = 800)
-p <- ggplot(DT_prioritised) +
-  geom_line(aes(x = Step, y = Prior_frac40, colour = my_palette[4])) +
-  geom_point(aes(x = Step, y = Prior_frac40, colour = my_palette[4]), size=0.5) +
-  # geom_errorbar(aes(x = Step, ymax = Prior_frac40 + Sd_prior40, ymin = Prior_frac40 - Sd_prior40), position = "dodge") +
-  geom_line(aes(x = Step, y = Prior_frac20, colour = my_palette[3])) +
-  geom_point(aes(x = Step, y = Prior_frac20, colour = my_palette[3]), size=0.5) +
-  geom_line(aes(x = Step, y = Prior_frac10, colour = my_palette[2])) +
-  geom_point(aes(x = Step, y = Prior_frac10, colour = my_palette[2]), size=0.5) +
-  geom_line(aes(x = Step, y = Prior_frac5, colour = my_palette[1])) +
-  geom_point(aes(x = Step, y = Prior_frac5, colour = my_palette[1]), size=0.5) +
-  geom_line(aes(x = Step, y = Missed_frac, color = "Red")) +
-  geom_point(aes(x = Step, y = Missed_frac, colour = "Red"), size=0.5) +
-  theme_dark() + 
-  # scale_color_discrete(name = "Series", labels = c("Prior 40", "Prior 20", "Prior 10", "Prior 5", "Missed"))+ 
-  scale_color_manual(name = "Frac. Series", 
-                     labels = c("Prior 5", "Prior 10", "Prior 20", "Prior 40", "Missed/p=1"),
-                     values=c(my_palette[1], my_palette[2], my_palette[3], my_palette[4],'RED'))
-p + facet_grid(Max_rxn ~ Z_threshold, labeller = label_both) +
-  geom_point(data = DT_prioritised[DT_prioritised$signif40 ==1, ],aes(x=Step, y=Prior_frac40),shape = "*", size=8, show.legend = FALSE, colour = "black") +
-  geom_point(data = DT_prioritised[DT_prioritised$signif20 ==1, ],aes(x=Step, y=Prior_frac20),shape = "*", size=8, show.legend = FALSE, colour = "black") +
-  geom_point(data = DT_prioritised[DT_prioritised$signif10 ==1, ],aes(x=Step, y=Prior_frac10),shape = "*", size=8, show.legend = FALSE, colour = "black") +
-  geom_point(data = DT_prioritised[DT_prioritised$signif5 ==1, ],aes(x=Step, y=Prior_frac5),shape = "*", size=8, show.legend = FALSE, colour = "black")
-dev.off()
-
-
-###########################################################################
-# Make plot of correctly prioritised genes --------------------------------
-###########################################################################
-
-png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/CorrectPrior.png", width = 800, height = 400)
-p <- ggplot(DT_prioritised, aes(x = factor(Step), y = Prior_frac)) +
-  # geom_dotplot(binaxis = "y", stackdir = "center", binwidth = 0.008) +
-  geom_boxplot() +
-  # geom_errorbar(aes(ymax = Prior_frac + Sd, ymin = Prior_frac - Sd),
-  #               position = "dodge")
-  theme_dark() 
-p + facet_grid(Max_rxn ~ Z_threshold)
-dev.off()
-
-
-###########################################################################
-# Make plot of Disease genes not picked up --------------------------------
-###########################################################################
-
-png(file = "/Users/mkerkho7/DIMS2_repo/Crossomics/TestResults/MissedGene.png", width = 800, height = 400)
-p <- ggplot(DT_missedgene, aes(x = factor(Step), y = Frac_missed)) +
-  # geom_dotplot(binaxis = "y", stackdir = "center", binwidth = 0.008) +
-  geom_boxplot() +
-  # geom_errorbar(aes(ymax = Frac_missed + Sd, ymin = Frac_missed - Sd),
-  #               position = "dodge")
-  theme_dark() 
-p + facet_grid(Max_rxn ~ Z_threshold)
-dev.off()
