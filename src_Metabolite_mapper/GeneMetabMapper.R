@@ -63,10 +63,10 @@ if(Sys.getenv("RSTUDIO") != "1") {
 # Other variables ---------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Subset_Of_Patients <- TRUE
+Subset_Of_Patients <- FALSE
 
-thresh_pos_list <- c(1,1.5,2,3, 5)
-thresh_neg_list <- c(-0.5,-1,-1.5,-3, -5)
+thresh_pos_list <- c(1.5,2,3, 5)
+thresh_neg_list <- c(-1,-1.5,-3, -5)
 
 # if(Subset_Of_Patients){
 #   sample_number <- 4
@@ -76,8 +76,8 @@ thresh_neg_list <- c(-0.5,-1,-1.5,-3, -5)
 top <- 20
 id <- "hmdb"
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-08-15" # The date of this run 
-nr_mocks <- 800
+date_run <- "2019-09-03" # The date of this run 
+nr_mocks <- 100
 outdir <- "Results/"
 
 # Remove any metabolites that (for some reason) should not be present
@@ -314,7 +314,7 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
       # for (j in 1:length(mss)){
         for (j in 1:length(mss)){
         # if(j%%5 == 0) cat(paste0(j, "%... "))
-        if(j%%100 == 0) cat("gene:", mss[j], "number:", j,"\n")
+        if(j%%33 == 0) cat("gene:", mss[j], "number:", j,"\n")
         # Skip the gene if there is no metabolite pathway xls_data available, elsewise, load its file
         if (!file.exists(paste(indir, mss[j], sep="/"))) next
         

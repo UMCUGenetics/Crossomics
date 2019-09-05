@@ -1,7 +1,10 @@
 library(rstudioapi)
 
-seeds <- c(2341, 6734892, 83, 698, 991)
-nr_mocks = 800
+seeds <- c(8372, 2528, 6140, 3880, 2771, 
+           8455, 3200, 6250, 4860, 6297, 
+           244, 3764, 2464, 3218, 2282, 
+           5600, 2359, 8353, 6399, 2001)
+nr_mocks <- 100
 
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 path <- paste0(code_dir,"/../Results/")
