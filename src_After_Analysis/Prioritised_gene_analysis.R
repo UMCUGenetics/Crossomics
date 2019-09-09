@@ -50,6 +50,7 @@ my_sig_palette <- rev(brewer.pal(6, "RdYlGn"))[2:6]
 high_res <- 600
 low_res <- 100
 resolution <- low_res
+digit_significance <- 3
 
 ##### Other ---------------------------------------------------------------
 # Exclude patients / diseases
@@ -419,7 +420,7 @@ p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_or
 for(i in c(1:5)){
   p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==i),],aes(x=Step, y=Av_top50, shape = "Best"), shape = "*", size=8, colour = my_sig_palette[i])
   p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==i),],
-                     aes(x=Step, y=Av_top50, label = signif(Av_top50, digits = 5), group = best_order), 
+                     aes(x=Step, y=Av_top50, label = signif(Av_top50, digits = digit_significance), group = best_order), 
                      size=3, 
                      # show.legend = FALSE, 
                      colour = my_sig_palette[i],
@@ -461,7 +462,7 @@ p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_or
 for(i in c(1:5)){
   p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==i),],aes(x=Step, y=Av_non_missed, shape = "Best"), shape = "*", size=8, colour = my_sig_palette[i])
   p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==i),],
-                     aes(x=Step, y=Av_non_missed, label = signif(Av_non_missed, digits = 5), group = best_order), 
+                     aes(x=Step, y=Av_non_missed, label = signif(Av_non_missed, digits = digit_significance), group = best_order), 
                      size=3, 
                      # show.legend = FALSE, 
                      colour = my_sig_palette[i],
@@ -508,7 +509,7 @@ geom_point(data = DT_per_parameter[DT_per_parameter$best_order_top05 ==1, ], aes
 for(i in c(1:5)){
   p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05"]==i),],aes(x=Step, y=35, shape = "Best"), shape = "*", size=8)
   p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05"]==i),],
-                     aes(x=Step, y=35, label = signif(Prior.frac05, digits = 4), group = best_order_top05),
+                     aes(x=Step, y=35, label = signif(Prior.frac05, digits = digit_significance), group = best_order_top05),
                      size=3,
                      # show.legend = FALSE,
                      colour = my_sig_palette[6-i],
