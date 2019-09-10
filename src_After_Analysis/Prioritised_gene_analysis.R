@@ -156,9 +156,8 @@ DT_tmp1 <- data.table()
 DT_tmp2 <- data.table()
 DT_tmp3 <- data.table()
 DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Prior.frac15","Prior.frac10","Prior.frac05","Prior.frac02","Prior.pos.frac.av.rev","Prior.pos.frac.av","Missed","Missed.frac",
-            "Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", "Prior.sd10", "Prior.sd05", "Prior.sd02","Prior.pos.frac.sd.rev","Prior.pos.frac.sd","Missed.sd", 
+            "Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", "Prior.sd10", "Prior.sd05", "Prior.sd02","Prior.pos.frac.sd.rev","Prior.pos.frac.sd","Missed.sd") :=  
             # "Out_top50", "In_top50"
-            ) := 
           tmpDT[, list(
             mean(Prioritised15), # Prior.frac15
             mean(Prioritised10), # Prior.frac10
@@ -176,7 +175,7 @@ DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Prior.frac15","Prior.frac10","Pri
             sd(Prioritised02), # Prior.sd02
             sd(Rev_Pos_frac), # Prior.pos.frac.sd.rev
             sd(Pos_frac), # Prior.pos.frac.sd
-            sd(Position==Total_genes), # Missed.sd
+            sd(Position==Total_genes) # Missed.sd
             # sum(!Prioritised50), # Out_top50
             # sum(Prioritised50) # In_top50
           ), by = .(Step, Z_threshold, Max_rxn)]]
@@ -194,15 +193,15 @@ DT_per_parameter[,c("best15","best10","best05","best02") := list(
   ifelse(Prior.frac10 == max(Prior.frac10), 1, 0),
   ifelse(Prior.frac05 == max(Prior.frac05), 1, 0),
   ifelse(Prior.frac02 == max(Prior.frac02), 1, 0))]
-DT_per_parameter[,"Frac.inTop50" := In_top50/(In_top50+Out_top50)]
+# DT_per_parameter[,"Frac.inTop50" := In_top50/(In_top50+Out_top50)]
 
 # Determine best parameters according to disease genes within top 50 (frac. in top 50 >= 0.5)
-DT_tmp <- DT_per_parameter[,Av_top50, Frac.inTop50]
-min_values <- unique(head(sort(DT_tmp[Frac.inTop50 >= 0.5, Av_top50]),5))
+# DT_tmp <- DT_per_parameter[,Av_top50, Frac.inTop50]
+# min_values <- unique(head(sort(DT_tmp[Frac.inTop50 >= 0.5, Av_top50]),5))
 
-DT_per_parameter[,"best_av50" := Frac.inTop50 >= 0.5 & Av_top50 %in% min_values]
+# DT_per_parameter[,"best_av50" := Frac.inTop50 >= 0.5 & Av_top50 %in% min_values]
 # DT_per_parameter[,"best_av50"] <- DT_per_parameter$Frac.inTop50 >= 0.5 & DT_per_parameter$Av_top50 %in% min_values
-DT_per_parameter[best_av50 == TRUE, best_order := rank(DT_per_parameter[best_av50 == TRUE, Av_top50])]
+# DT_per_parameter[best_av50 == TRUE, best_order := rank(DT_per_parameter[best_av50 == TRUE, Av_top50])]
 
 # Determine best parameters according to non-missed disease genes (frac. missed < 0.5)
 DT_tmp <- DT_per_parameter[,Av_non_missed, Missed.frac]
