@@ -108,7 +108,7 @@ pretty_plot <- function(p, theme = "light", secondary_y_axis = TRUE){
   z <- gtable_add_cols(z, unit(z$widths[[7]], 'cm'), right_lab_loc)
   z <- gtable_add_grob(z, 
                        list(rectGrob(gp = gpar(col = NA, fill = ifelse(theme=="dark", "lightgray", gray(0.5)))),
-                            textGrob("Extention stringency", rot = -90, gp = gpar(col = ifelse(theme=="dark", "black", "white")))),
+                            textGrob("Extension stringency", rot = -90, gp = gpar(col = ifelse(theme=="dark", "black", "white")))),
                        # 8, 15, 18, 15, name = paste(runif(2)))
                        8, right_lab_loc+1, right_lab_bottom, right_lab_loc+1, name = paste(runif(2)))
   
