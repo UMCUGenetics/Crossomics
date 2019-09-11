@@ -53,9 +53,9 @@ if(Sys.getenv("RSTUDIO") != "1") {
   threshold <- 5 # possible 1, 2, 3, 4, 5
   maxrxn <- 19 # possible: 8, 10, 12, 15, 17, 19
   step <- 5 # possible 1, 2, 3, 4, 5
-  patient_number <- 29 # possible 1:51
+  patient_number <- 3 # possible 1:51
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  seed <- 6734892
+  seed <- 244
 }
 
 
@@ -76,13 +76,16 @@ thresh_neg_list <- c(-1,-1.5,-3, -5)
 top <- 20
 id <- "hmdb"
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-09-03" # The date of this run 
+date_run <- "2019-09-11" # The date of this run 
 nr_mocks <- 100
 outdir <- "Results/"
 
 # Remove any metabolites that (for some reason) should not be present
 # HMDB0002467 <- determined to be non-bodily substances, but created in the lab
 bad_mets <- c("HMDB0002467")
+
+# train_data_name <- "Crossomics_DBS_Marten_Training.RData"
+train_data_name <- "Crossomics_DBS_Marten_Training&Validation.RData"
 
 
 
@@ -141,10 +144,16 @@ source(paste0(code_dir,"/Supportive/sourceDir.R"))
 sourceDir(paste0(code_dir,"/Supportive"), trace = FALSE)
 
 
-load("Data/Crossomics_DBS_Marten_Training.RData")
+load(paste0("Data/", train_data_name))
 
 # Load mock gene set
-mss <- read.table(paste0("./Results/",date_run,"/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+mss <- read.table(paste0("./Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+
+# correct naming of new training set to old format
+if(sum(colnames(xls_data) == "Patient number in set") > 0){
+  colnames(xls_data)[colnames(xls_data) == "Patient number in set"] <- "Patient.number"
+}
+
 
 # Load patient subset
 if (!Subset_Of_Patients){
@@ -190,14 +199,16 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
   # Get disease gene for patient
   dis_gene <- xls_data$Gene[grepl(patient, xls_data$Patient.number) & xls_data$Dataset == dataset][1]
   
-  # Fix incorrect name for MMUT gene
-  if(dis_gene == "MUT") dis_gene <- "MMUT"
-  
   # In the case there are multiple disease genes stated:
   if(grepl(";",dis_gene)){
     dis_gene <- unlist(strsplit(dis_gene, split = "; "))
     dis_gene <- trimws(dis_gene)
   }
+  
+  # Fix name for MUT / MMUT gene to pathwaycommons version
+  dis_gene <- gsub(pattern = "^MUT$", replacement = "MMUT", x = dis_gene)
+  
+
   
   
   
@@ -214,9 +225,10 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
   # Calculate Z scores ------------------------------------------------------
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   
-  if(nchar(patient) == 2) {
-    tmp_patient <- unlist(strsplit(patient, split = ""))
-    patient <- paste0(tmp_patient[1],"0",tmp_patient[2])
+  if(nchar(patient) < 4) {
+    tmp_patient <- unlist(strsplit(patient, split = "P"))[2]
+    tmp_patient <- str_pad(tmp_patient, 3, pad = "0")
+    patient <- paste0("P",tmp_patient)
   }
   
   Zint_values <- generate_av_Z_scores(patient = patient, data_location = data_location)

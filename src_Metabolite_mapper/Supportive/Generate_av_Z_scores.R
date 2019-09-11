@@ -63,7 +63,7 @@ generate_av_Z_scores <- function(patient, data_location = "."){
   # Make all column names follow the same structure: [C or P] followed by [AT LEAST two digits] followed by [.x]
   colname_list <- strsplit(grep("^[CP]", colnames(outlist.neg.adducts.HMDB), value = TRUE), "(?=[CP\\.])", perl = TRUE)
   for (i in 1:length(colname_list)){
-    colname_list[[i]][2] <- str_pad(colname_list[[i]][2], 2, pad = "0")
+    colname_list[[i]][2] <- str_pad(colname_list[[i]][2], 3, pad = "0")
     colname_list[[i]] <- paste(colname_list[[i]], collapse = "")
   }
   colnames(outlist.neg.adducts.HMDB) <- c(unlist(colname_list), colnames(outlist.neg.adducts.HMDB)[length(colnames(outlist.neg.adducts.HMDB))])
