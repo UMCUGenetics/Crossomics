@@ -85,7 +85,7 @@ outdir <- "Results/"
 bad_mets <- c("HMDB0002467")
 
 # train_data_name <- "Crossomics_DBS_Marten_Training.RData"
-train_data_name <- "Crossomics_DBS_Marten_Training&Validation.RData"
+train_data_name <- "Crossomics_DBS_Marten_Training_Validation.RData"
 
 
 
