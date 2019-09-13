@@ -54,8 +54,8 @@ digit_significance <- 3
 
 ##### Other ---------------------------------------------------------------
 # Exclude patients / diseases
-NoTrans <- TRUE
-subset_patients <- TRUE
+NoTrans <- FALSE
+subset_patients <- FALSE
 
 # Date of data
 date <- "2019-09-03"
@@ -461,7 +461,7 @@ p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_or
 for(i in c(1:5)){
   p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==i),],aes(x=Step, y=Av_non_missed, shape = "Best"), shape = "*", size=8, colour = my_sig_palette[i])
   p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==i),],
-                     aes(x=Step, y=Av_non_missed, label = signif(Av_non_missed, digits = digit_significance), group = best_order), 
+                     aes(x=Step, y=Av_non_missed, label = signif(Av_non_missed, digits = digit_significance), group = best_order_NM), 
                      size=3, 
                      # show.legend = FALSE, 
                      colour = my_sig_palette[i],
