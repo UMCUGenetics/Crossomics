@@ -81,13 +81,13 @@ seeds <- unique(DT$Seed)
 if(subset_patients){
   patients_excluded <- c("P56","P57","P58","P59","P68")
   DT <- DT[!Patient %in% patients_excluded]
-  sub_name <- "sub_P"
+  sub_name <- "Sub_P"
 } else {
-  sub_name <- "all_P"
+  sub_name <- "All_P"
 }
 
 outdir_name <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Plots/",Sys.Date())
-var_name <- ifelse(NoTrans, "NoTrans", "AllGenes")
+var_name <- ifelse(NoTrans, "No_Trans", "All_Genes")
 if (!file.exists(outdir_name))dir.create(outdir_name, recursive = TRUE)
 
 
@@ -293,7 +293,7 @@ p <- ggplot(DT_per_parameter, aes(x = Step)) +
                      labels = c("In Top 15", "Missed"),
                      values=c(my_greens[1],'RED'))
 z <- pretty_plot(p, theme = "dark")
-ggsave(paste0(outdir_name,"/EmptyFacet_",var_name,"_",sub_name,".png"), plot = z,
+ggsave(paste0(outdir_name,"/Empty_Facet_",var_name,"_",sub_name,".png"), plot = z,
        width = 250, height = 200, dpi=resolution, units = "mm")
 
 # Simple plot, just top 15, all parameter combinations
@@ -311,7 +311,7 @@ p <- ggplot(DT_per_parameter, aes(x = Step)) +
                      labels = c("In Top 15", "Missed"),
                      values=c(my_greens[4],'RED'))
 z <- pretty_plot(p, theme = "dark")
-ggsave(paste0(outdir_name,"/PriorMissed_justtop15_",var_name,"_",sub_name,".png"), plot = z,
+ggsave(paste0(outdir_name,"/Ranks_And_Missed_Top15_",var_name,"_",sub_name,".png"), plot = z,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 # Single panel from big facet plot (top 2, 5, 10 and 15)
@@ -348,7 +348,7 @@ p <- p + theme_dark() +
   guides(colour = guide_legend(order = 1, reverse = TRUE),
          fill = guide_legend(order = 2, reverse = TRUE))
 # colour = adjustcolor(my_greens[4],alpha.f=0.5), fill = my_greens[4], alpha="0.5"
-ggsave(paste0(outdir_name,"/PriorMissed_SingleParComb",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Ranks_And_Missed_Single_Par_Comb",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -395,7 +395,7 @@ p <- p + theme_dark() +
                      labels = c("In Top 2", "In Top 5", "In Top 10", "In Top 15", "Missed"),
                      values=c(my_greens,'RED'))
 p <- pretty_plot(p, theme = "dark")
-ggsave(paste0(outdir_name,"/PriorMissed_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -476,7 +476,7 @@ p <- p +
   guides(shape = guide_legend(order = 1),
          colour = guide_legend(order = 2)) 
 p <- pretty_plot(p, theme = "dark")
-ggsave(paste0(outdir_name,"/Non_missed_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Ranks_Non_Missed_And_Missed",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -522,7 +522,7 @@ p <- p + scale_color_manual(name = "Non-missed genes",
                             labels = c("Per-patient rank"),
                             values=c("blue"))
 p <- pretty_plot(p, secondary_y_axis = FALSE, theme = "dark")
-ggsave(paste0(outdir_name,"/Method_stability_and_best_parameters.png"), plot = p,
+ggsave(paste0(outdir_name,"/Average_Patient_And_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -545,7 +545,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Av_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Av_rank_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Av_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -563,7 +563,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Sd_rank_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Sd_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -580,7 +580,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Av_Rel_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Av_Rel_rank_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Av_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -597,7 +597,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_Rel_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Sd_Rel_rank_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Sd_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -614,7 +614,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Av_Rev_Rel_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Av_Rev_Rel_rank_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Av_Rev_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -631,7 +631,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_Rev_Rel_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Sd_Rev_Rel_rank_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Sd_Rev_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -652,6 +652,6 @@ p <- ggplot(data = DT_per_parameter, aes(x = Step)) +
          # fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p, secondary_y_axis = TRUE)
-ggsave(paste0(outdir_name,"/AvRank_Sd_PerPatient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/Av_Rank_Sd_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
