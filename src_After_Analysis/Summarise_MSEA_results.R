@@ -43,6 +43,7 @@ seeds <- c(8372, 2528, 6140, 3880, 2771,
            8455, 3200, 6250, 4860, 6297, 
            244, 3764, 2464, 3218, 2282, 
            5600, 2359, 8353, 6399, 2001)
+patient_info_file <- "Crossomics_DBS_Marten_Training_inclProt_function.RData"
 patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
 
 
@@ -50,7 +51,7 @@ patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
 # Prepare data ------------------------------------------------------------
 ###########################################################################
 
-load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.RData"))
+load(paste0(code_dir,"/../Data/", patient_info_file))
 # xls_data <- xlsx::read.xlsx(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.xlsx"), sheetIndex = 1, colIndex = c(1:7), rowIndex = c(1:107), stringsAsFactors = FALSE)
 # save(xls_data, file = paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.RData"))
 
