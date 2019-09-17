@@ -87,6 +87,8 @@ bad_mets <- c("HMDB0002467")
 # train_data_name <- "Crossomics_DBS_Marten_Training.RData"
 train_data_name <- "Crossomics_DBS_Marten_Training_Validation.RData"
 
+redo <- "_REDO_" #(null or "_REDO_")
+
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -323,7 +325,8 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
       
       
       # step_folder <- paste0(patient_folder,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
-      step_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
+      # step_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
+      step_folder <- paste0(date_run,"/", patient, redo,"_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
       
       dir.create(paste0(outdir,step_folder), recursive = TRUE, showWarnings = FALSE)
       
