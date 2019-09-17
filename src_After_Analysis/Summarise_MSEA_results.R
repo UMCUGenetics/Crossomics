@@ -72,7 +72,7 @@ if("Patient number in set" %in% colnames(xls_data)){
 xls_unique <- xls_data[!duplicated(apply( xls_data[ , c( 'Dataset' , 'Patient' ) ] , 1 , paste , collapse = "_" )),]
 
 # Fix numbering of patients to contain 3 digits
-xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_pad(unlist(strsplit(x, split = "P"))[2], 4, side = "left", pad = "0")))]
+xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_pad(unlist(strsplit(x, split = "P"))[2], 3, side = "left", pad = "0")))]
 
 # fixed_patients <- unlist(lapply(strsplit(xls_unique$Patient[nchar(xls_unique$Patient) <= 3], split = ""), function(x) paste0(x[1],"0",x[2])))
 # xls_unique$Patient[nchar(xls_unique$Patient) == 2] <- fixed_patients
@@ -83,7 +83,7 @@ xls_unique <- xls_unique[Gene != "NA",]
 # select test set or validation set & only non-exlusion patients
 which_set <- ifelse(testset == TRUE, "Training set", "Validation set")
 xls_unique <- xls_unique[`Type set` == which_set & (is.na(xls_unique[,`Judith:`]) | `Judith:` == "Inclusion"),]
-
+xls_unique <- as.data.table(xls_unique)
 
 DT <- NULL
 
@@ -184,5 +184,9 @@ DT[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
 DT[, Step:=factor(Step, levels = steps)]
 DT[, Protein_function:=as.factor(Protein_function)]
 
+if(testset){
+  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_testset.RDS"))
+} else {
+  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_validationset.RDS"))
+}
 
-saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled.RDS"))
