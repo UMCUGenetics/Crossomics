@@ -46,6 +46,7 @@ seeds <- c(8372, 2528, 6140, 3880, 2771,
            5600, 2359, 8353, 6399, 2001)
 patient_info_file <- "Crossomics_DBS_Marten_Training_Validation.RData"
 patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
+testset <- TRUE
 
 
 ###########################################################################
@@ -71,14 +72,20 @@ if("Patient number in set" %in% colnames(xls_data)){
 xls_unique <- xls_data[!duplicated(apply( xls_data[ , c( 'Dataset' , 'Patient' ) ] , 1 , paste , collapse = "_" )),]
 
 # Fix numbering of patients to contain 3 digits
-xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_pad(unlist(strsplit(x, split = "P"))[2], 3, side = "left", pad = "0")))]
+xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_pad(unlist(strsplit(x, split = "P"))[2], 4, side = "left", pad = "0")))]
 
 # fixed_patients <- unlist(lapply(strsplit(xls_unique$Patient[nchar(xls_unique$Patient) <= 3], split = ""), function(x) paste0(x[1],"0",x[2])))
 # xls_unique$Patient[nchar(xls_unique$Patient) == 2] <- fixed_patients
 
+# Remove patients/disease genes who are artifacts
+xls_unique <- xls_unique[Gene != "NA",]
+
+# select test set or validation set & only non-exlusion patients
+which_set <- ifelse(testset == TRUE, "Training set", "Validation set")
+xls_unique <- xls_unique[`Type set` == which_set & (is.na(xls_unique[,`Judith:`]) | `Judith:` == "Inclusion"),]
+
+
 DT <- NULL
-
-
 
 ###########################################################################
 # Collate results to 1 data table -----------------------------------------
