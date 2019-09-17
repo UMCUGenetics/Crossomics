@@ -194,22 +194,29 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
   dataset <- tmp[1]
   patient <- tmp[2]
   rm(tmp)
-  cat(dataset, patient, "\n")
+  # cat(dataset, patient, "\n")
   
   # Get disease gene for patient
+  
   dis_gene <- xls_data$Gene[grepl(patient, xls_data$Patient.number) & xls_data$Dataset == dataset][1]
   
   # In the case there are multiple disease genes stated:
-  if(grepl(";",dis_gene)){
-    dis_gene <- unlist(strsplit(dis_gene, split = "; "))
-    dis_gene <- trimws(dis_gene)
+  if(grepl("[;,]+", dis_gene)) {
+    dis_gene <- unique(trimws(unlist(strsplit(dis_gene, split = "[;,]+"))))
   }
+  
+  # if(grepl(";",dis_gene)){
+  #   dis_gene <- unlist(strsplit(dis_gene, split = ";"))
+  #   dis_gene <- trimws(dis_gene)
+  # }
+  # if(grepl(",",dis_gene)){
+  #   dis_gene <- unlist(strsplit(dis_gene, split = ","))
+  #   dis_gene <- trimws(dis_gene)
+  # }
   
   # Fix name for MUT / MMUT gene to pathwaycommons version
   dis_gene <- gsub(pattern = "^MUT$", replacement = "MMUT", x = dis_gene)
-  
 
-  
   
   
   data_location <- xls_data$Location[match(dataset, xls_data$Dataset)]
@@ -225,7 +232,7 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
   # Calculate Z scores ------------------------------------------------------
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   
-  if(nchar(patient) < 4) {
+  if(nchar(patient) <= 3) {
     tmp_patient <- unlist(strsplit(patient, split = "P"))[2]
     tmp_patient <- str_pad(tmp_patient, 3, pad = "0")
     patient <- paste0("P",tmp_patient)
