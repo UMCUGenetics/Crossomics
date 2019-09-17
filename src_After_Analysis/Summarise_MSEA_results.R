@@ -25,6 +25,7 @@
 library("rstudioapi")
 library("Matrix.utils")
 library("data.table")
+library("stringr") # for patient digit fixing
 
 # library("XLConnect") # Only for older results. Switched to .RData files
 # library("xlsx")
@@ -38,12 +39,12 @@ code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 Z_thresholds <- c("-1, 1.5", "-1.5, 2", "-3, 3", "-5, 5")
 max_rxns <- c(8, 10, 12, 15, 17, 19)
 steps <- c(0,1,2,3,4,5)
-date <- "2019-09-03"
+date <- "2019-09-11"
 seeds <- c(8372, 2528, 6140, 3880, 2771, 
            8455, 3200, 6250, 4860, 6297, 
            244, 3764, 2464, 3218, 2282, 
            5600, 2359, 8353, 6399, 2001)
-patient_info_file <- "Crossomics_DBS_Marten_Training_inclProt_function.RData"
+patient_info_file <- "Crossomics_DBS_Marten_Training_Validation.RData"
 patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
 
 
@@ -55,18 +56,25 @@ load(paste0(code_dir,"/../Data/", patient_info_file))
 # xls_data <- xlsx::read.xlsx(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.xlsx"), sheetIndex = 1, colIndex = c(1:7), rowIndex = c(1:107), stringsAsFactors = FALSE)
 # save(xls_data, file = paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.RData"))
 
-
+if("Patient number in set" %in% colnames(xls_data)){
+  xls_data$Patient <- unlist(lapply(xls_data$`Patient number in set`, function(x) unlist(strsplit(x, split = "\\."))[1]))
+} else if ("Patient.number" %in% colnames(xls_data)){
+  xls_data$Patient <- unlist(lapply(xls_data$Patient.number, function(x) unlist(strsplit(x, split = "\\."))[1]))
+} else {
+  stop("column names of xls_data do not follow a known pattern")
+}
 
 # columns to paste together
-xls_data$Patient <- unlist(lapply(xls_data$Patient.number, function(x) unlist(strsplit(x, split = "\\."))[1]))
-cols <- c( 'Dataset' , 'Patient' )
+# cols <- c( 'Dataset' , 'Patient' )
 
 # create a new column `x` with the three columns collapsed together
-xls_unique <- xls_data[!duplicated(apply( xls_data[ , cols ] , 1 , paste , collapse = "_" )),]
+xls_unique <- xls_data[!duplicated(apply( xls_data[ , c( 'Dataset' , 'Patient' ) ] , 1 , paste , collapse = "_" )),]
 
-# Fix numbering of some patients
-fixed_patients <- unlist(lapply(strsplit(xls_unique$Patient[nchar(xls_unique$Patient) == 2], split = ""), function(x) paste0(x[1],"0",x[2])))
-xls_unique$Patient[nchar(xls_unique$Patient) == 2] <- fixed_patients
+# Fix numbering of patients to contain 3 digits
+xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_pad(unlist(strsplit(x, split = "P"))[2], 3, side = "left", pad = "0")))]
+
+# fixed_patients <- unlist(lapply(strsplit(xls_unique$Patient[nchar(xls_unique$Patient) <= 3], split = ""), function(x) paste0(x[1],"0",x[2])))
+# xls_unique$Patient[nchar(xls_unique$Patient) == 2] <- fixed_patients
 
 DT <- NULL
 
@@ -77,8 +85,9 @@ DT <- NULL
 ###########################################################################
 
 for (i in 1:nrow(xls_unique)){
-  patient <- xls_unique$Patient[i]
+  patient <- unlist(xls_unique[i, Patient])
   prot_func <- xls_unique$Gene.product.function[i]
+  if(is.null(prot_func)) prot_func <- NA
   if (length(patients_not_done) > 0){
     if(xls_unique$Patient.number[i] %in% patients_not_done) next
   }
@@ -86,8 +95,9 @@ for (i in 1:nrow(xls_unique)){
   dis_gene <- xls_unique$Gene[i]
   dis_gene <- unlist(strsplit(dis_gene, split = "; "))
   is_trans <- xls_unique$Gene.product.function[i] == "transporter"
-  # patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
-  patient_folder <- paste0(date,"_MSEA_results/", patient, "_",xls_unique$Dataset[i])
+  if(length(is_trans) == 0) is_trans <- NA
+  patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
+  # patient_folder <- paste0(date,"_MSEA_results/", patient, "_",xls_unique$Dataset[i])
   path <- paste0(code_dir,"/../Results/",patient_folder)
   
   for(seed in seeds){
