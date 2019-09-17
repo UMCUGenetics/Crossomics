@@ -9,7 +9,7 @@ nr_mocks <- 100
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 path <- paste0(code_dir,"/../Results/")
 
-# Load dataset containing patients with their disease genes (dataset is called xls_data)
+# Load dataset containing patients with their disease genes (dataset is called xls_data and is a data.table)
 load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.RData"))
 dis_genes <- unique(xls_data$Gene)
 # dis_genes[dis_genes == "MUT"] <- "MMUT" # Fix incorrect MUT name
