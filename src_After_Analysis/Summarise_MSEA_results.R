@@ -46,7 +46,7 @@ seeds <- c(8372, 2528, 6140, 3880, 2771,
            5600, 2359, 8353, 6399, 2001)
 patient_info_file <- "Crossomics_DBS_Marten_Training_Validation.RData"
 patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
-testset <- TRUE
+trainingset <- TRUE
 
 
 ###########################################################################
@@ -81,7 +81,7 @@ xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_p
 xls_unique <- xls_unique[Gene != "NA",]
 
 # select test set or validation set & only non-exlusion patients
-which_set <- ifelse(testset == TRUE, "Training set", "Validation set")
+which_set <- ifelse(trainingset == TRUE, "Training set", "Validation set")
 xls_unique <- xls_unique[`Type set` == which_set & (is.na(xls_unique[,`Judith:`]) | `Judith:` == "Inclusion"),]
 xls_unique <- as.data.table(xls_unique)
 
@@ -184,8 +184,8 @@ DT[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
 DT[, Step:=factor(Step, levels = steps)]
 DT[, Protein_function:=as.factor(Protein_function)]
 
-if(testset){
-  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_testset.RDS"))
+if(trainingset){
+  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_trainingset.RDS"))
 } else {
   saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_validationset.RDS"))
 }
