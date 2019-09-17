@@ -58,7 +58,7 @@ try(setwd("/Volumes/Metab/Metabolomics/DIMS_pipeline/R_workspace_ME/Crossomics/C
 
 # To what distance from the reaction should metabolites be considered?
 # distance_to_gene <- 1 # Staat nog niet aan, kijk naar het begin van de "then perform MSEA"
-patients=c(221)
+patients=c(241)
 
 
 
@@ -594,476 +594,476 @@ Sys.time()
 
 
 
-
-
-########################################################################
-########################################################################
-########################################################################
-path="./results/crossomics_Fisher_Weighted"
-# dir.create(path, showWarnings = FALSE)
-overview = NULL
-
-for (i in 1:length(patients)){
-  
-  ######################## MSEA Revon2 neighbourhood ######################################################
-  # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
-  # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
-  
-  # message(paste("Patient", patients[i]))
-  
-  # subset to 1 patient!
-  p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
-                                grep("C", colnames(p.values.assi.all), fixed=TRUE),
-                                which(colnames(p.values.assi.all)=="avg.int.controls"))] 
-  
-  load(paste0("./results/mss_",genes[i][[1]][1],i,".RData"))
-  
-  metSetResult = NULL
-  nMets = NULL
-  
-  #   for (j in 1:dim(gene_map_table)[1]){
-  for (j in 1:length(mss)){
-    
-    if (!file.exists(paste(path2, mss[j], sep="/"))) next
-    
-    load(paste(path2, mss[j], sep="/"))
-    gene_in=strsplit(mss[j], split = "." , fixed=TRUE)[[1]][1]
-    
-    # A lot of missing HMDB identifiers!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # metaboliteSet = retVal$mets
-    if (step==2){
-      metaboliteSet = result_mets_2
-    } else if (step==1){
-      metaboliteSet = result_mets_1
-    } else if (step==3){
-      metaboliteSet = result_mets_3
-    } else {
-      metaboliteSet = result_mets_0
-    }
-    
-    if (!is.null(metaboliteSet)){
-      if (is.null(dim(metaboliteSet))){
-        metaboliteSet=data.frame(t(metaboliteSet))
-      }
-    }  
-    
-    ##################################################
-    # temporarily work around to be fixed in findMetabolicEnvironment
-    index = which(is.na(metaboliteSet[,"hmdb"]))
-    if (length(index)>0) metaboliteSet[index,"hmdb"] = "character(0)"
-    ##################################################
-    
-    ########### Recon 2.0 ############################
-    index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-    
-    # pressent in BridgeDB?
-    index.sub = which(metaboliteSet[index,"kegg"] != "character(0)")  # ME filter metaboliteSet for empty Kegg 
-    kegg_id = metaboliteSet[index[index.sub],"kegg"] # ME get kegg_id's for metaboliteSet
-    
-    mapper = loadDatabase("./db/BridgeDB/metabolites_20150717.bridge")
-    hmdb = getSystemCode("HMDB")  
-    kegg = getSystemCode("KEGG Compound") 
-    
-    if (length(kegg_id)>0){
-      for (k in 1:length(kegg_id)){
-        if (!is.null(unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]) 
-      }
-    }  
-    
-    index = which(metaboliteSet[,"hmdb"] == "character(0)")
-    index.sub = which(metaboliteSet[index,"chebi"] != "character(0)")
-    chebi_id = metaboliteSet[index[index.sub],"chebi"]
-    
-    chebi = getSystemCode("ChEBI")# ME system code for chebi ??
-    
-    if (length(chebi_id)>0){
-      for (k in 1:length(chebi_id)){
-        if (!is.null(unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]) 
-      }
-    }
-    
-    index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-    if (length(index)>0) metaboliteSet = metaboliteSet[-index,,drop=FALSE]
-    #######################################################
-    
-    #     ########### Recon 2.2 ############################
-    #     inchi = metaboliteSet[,"InChI_key"]
-    #     chebi_id = metaboliteSet[,"chebi"]
-    #     index=which((is.na(chebi_id)&is.na(inchi)))
-    #     if (length(index)>0){
-    #       metaboliteSet = metaboliteSet[-index,]
-    #     }
-    #     #######################################################
-    
-    # Add glycine and carnitine conjugates to CoA compounds
-    #addConjugates(metaboliteSet)
-    
-    #     if (!is.null(metaboliteSet) && (dim(metaboliteSet)[1]!=0)){
-    #       if (is.null(dim(metaboliteSet))){
-    #         metaboliteSet=data.frame(t(metaboliteSet))
-    #       }
-    
-    # nMets=c(nMets, dim(metaboliteSet)[1])
-    nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
-    # message(paste("gene: ", gene_in))
-    # message(paste("metaboliteSet: ", dim(metaboliteSet)[1]))
-    
-    #     Warning messages:
-    #       1: In data.row.names(row.names, rowsi, i) :
-    #       some row.names duplicated: 6 --> row.names NOT used
-    #     2: In data.row.names(row.names, rowsi, i) :
-    #       some row.names duplicated: 17 --> row.names NOT used
-    
-    
-    # which(is.na(p.values[1,]))
-    
-    retVal = performMSEA(metaboliteSet, p.values, patients[i], gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, 3, top, id, adductsSummed)
-    
-    p_value = as.numeric(retVal$p.value)
-    if (length(p_value)==0){
-      p_value=NA
-    }
-    
-    metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste("P", patients[i], sep=""), "metabolite.set"=gene_in))
-    
-  }
-  
-  tmp=data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-  # genExcelFileShort(tmp[order(as.numeric(tmp[,"p.value"])),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
-  
-  if (!is.null(genes)){
-    tmp1 = tmp[order(tmp[,"p.value"]),]
-    
-    dummy = c(NA,0,0)
-    for (l in 1:(100-dim(tmp)[1])){
-      tmp1 = rbind(tmp1,dummy) 
-    }
-    
-    overview = rbind(overview, t(tmp1))
-  }
-  
-  # # rank
-  # index.rank = min(which(tmp2[1,]%in%unlist(genes[i])))
-  # rank = rank + index.rank 
-  # p_value_sum = p_value_sum + as.numeric(tmp2[2,index.rank]) 
-  ##########################################################################################################
-}
-# if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
-# rank = rank/length(patients)
-# save(rank, p_value_sum, file=paste(path,"/rank.RData",sep=""))
-Sys.time()
-
-########################################################################
-########################################################################
-########################################################################
-path="./results/crossomics_Hyper"
-# dir.create(path, showWarnings = FALSE)
-overview = NULL
-
-for (i in 1:length(patients)){
-  
-  ######################## MSEA Revon2 neighbourhood ######################################################
-  # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
-  # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
-  
-  # message(paste("Patient", patients[i]))
-  
-  # subset to 1 patient!
-  p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
-                                grep("C", colnames(p.values.assi.all), fixed=TRUE),
-                                which(colnames(p.values.assi.all)=="avg.int.controls"))] 
-  
-  load(paste0("./results/mss_",genes[i],i,".RData"))
-  
-  metSetResult = NULL
-  nMets = NULL
-  
-  #   for (j in 1:dim(gene_map_table)[1]){
-  for (j in 1:length(mss)){
-    
-    if (!file.exists(paste(path2, mss[j], sep="/"))) next
-    
-    load(paste(path2, mss[j], sep="/"))
-    gene_in=strsplit(mss[j], split = "." , fixed=TRUE)[[1]][1]
-    
-    # A lot of missing HMDB identifiers!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # metaboliteSet = retVal$mets
-    if (step==2){
-      metaboliteSet = result_mets_2
-    } else if (step==1){
-      metaboliteSet = result_mets_1
-    } else if (step==3){
-      metaboliteSet = result_mets_3
-    } else {
-      metaboliteSet = result_mets_0
-    }
-    
-    if (!is.null(metaboliteSet)){
-      if (is.null(dim(metaboliteSet))){
-        metaboliteSet=data.frame(t(metaboliteSet))
-      }
-    }  
-    
-    ##################################################
-    # temporarily work around to be fixed in findMetabolicEnvironment
-    index = which(is.na(metaboliteSet[,"hmdb"]))
-    if (length(index)>0) metaboliteSet[index,"hmdb"] = "character(0)"
-    ##################################################
-    
-    ########### Recon 2.0 ############################
-    index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-    
-    # pressent in BridgeDB?
-    index.sub = which(metaboliteSet[index,"kegg"] != "character(0)")
-    kegg_id = metaboliteSet[index[index.sub],"kegg"]
-    
-    mapper = loadDatabase("./db/BridgeDB/metabolites_20150717.bridge")
-    hmdb = getSystemCode("HMDB")
-    kegg = getSystemCode("KEGG Compound")
-    
-    if (length(kegg_id)>0){
-      for (k in 1:length(kegg_id)){
-        if (!is.null(unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]) 
-      }
-    }  
-    
-    index = which(metaboliteSet[,"hmdb"] == "character(0)")
-    index.sub = which(metaboliteSet[index,"chebi"] != "character(0)")
-    chebi_id = metaboliteSet[index[index.sub],"chebi"]
-    
-    chebi = getSystemCode("ChEBI")
-    
-    if (length(chebi_id)>0){
-      for (k in 1:length(chebi_id)){
-        if (!is.null(unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]) 
-      }
-    }
-    
-    index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-    if (length(index)>0) metaboliteSet = metaboliteSet[-index,,drop=FALSE]
-    #######################################################
-    
-    #     ########### Recon 2.2 ############################
-    #     inchi = metaboliteSet[,"InChI_key"]
-    #     chebi_id = metaboliteSet[,"chebi"]
-    #     index=which((is.na(chebi_id)&is.na(inchi)))
-    #     if (length(index)>0){
-    #       metaboliteSet = metaboliteSet[-index,]
-    #     }
-    #     #######################################################
-    
-    # Add glycine and carnitine conjugates to CoA compounds
-    #addConjugates(metaboliteSet)
-    
-    #     if (!is.null(metaboliteSet) && (dim(metaboliteSet)[1]!=0)){
-    #       if (is.null(dim(metaboliteSet))){
-    #         metaboliteSet=data.frame(t(metaboliteSet))
-    #       }
-    
-    # nMets=c(nMets, dim(metaboliteSet)[1])
-    nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
-    # message(paste("gene: ", gene_in))
-    # message(paste("metaboliteSet: ", dim(metaboliteSet)[1]))
-    
-    #     Warning messages:
-    #       1: In data.row.names(row.names, rowsi, i) :
-    #       some row.names duplicated: 6 --> row.names NOT used
-    #     2: In data.row.names(row.names, rowsi, i) :
-    #       some row.names duplicated: 17 --> row.names NOT used
-    
-    
-    # which(is.na(p.values[1,]))
-    
-    retVal = performMSEAenv(metaboliteSet, p.values, patients[i], gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, 1, top, id, adductsSummed)
-    
-    p_value = as.numeric(retVal$p.value)
-    if (length(p_value)==0){
-      p_value=NA
-    }
-    
-    metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste("P", patients[i], sep=""), "metabolite.set"=gene_in))
-    
-  }
-  
-  tmp=data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-  # genExcelFileShort(tmp[order(as.numeric(tmp[,"p.value"])),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
-  
-  if (!is.null(genes)){
-    tmp1 = tmp[order(tmp[,"p.value"]),]
-    
-    dummy = c(NA,0,0)
-    for (l in 1:(100-dim(tmp)[1])){
-      tmp1 = rbind(tmp1,dummy) 
-    }
-    
-    overview = rbind(overview, t(tmp1))
-  }
-  
-  # # rank
-  # index.rank = min(which(tmp2[1,]%in%unlist(genes[i])))
-  # rank = rank + index.rank 
-  # p_value_sum = p_value_sum + as.numeric(tmp2[2,index.rank]) 
-  ##########################################################################################################
-}
-# if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
-# rank = rank/length(patients)
-# save(rank, p_value_sum, file=paste(path,"/rank.RData",sep=""))
-Sys.time()
-
-########################################################################
-########################################################################
-########################################################################
-path="./results/crossomics_Hyper_Weighted"
-# dir.create(path, showWarnings = FALSE)
-overview = NULL
-
-for (i in 1:length(patients)){
-  
-  ######################## MSEA Revon2 neighbourhood ######################################################
-  # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
-  # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
-  
-  # message(paste("Patient", patients[i]))
-  
-  # subset to 1 patient!
-  p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
-                                grep("C", colnames(p.values.assi.all), fixed=TRUE),
-                                which(colnames(p.values.assi.all)=="avg.int.controls"))] 
-  
-  load(paste0("./results/mss_",genes[i],i,".RData"))
-  
-  metSetResult = NULL
-  nMets = NULL
-  
-  #   for (j in 1:dim(gene_map_table)[1]){
-  for (j in 1:length(mss)){
-    
-    if (!file.exists(paste(path2, mss[j], sep="/"))) next
-    
-    load(paste(path2, mss[j], sep="/"))
-    gene_in=strsplit(mss[j], split = "." , fixed=TRUE)[[1]][1]
-    
-    # A lot of missing HMDB identifiers!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # metaboliteSet = retVal$mets
-    if (step==2){
-      metaboliteSet = result_mets_2
-    } else if (step==1){
-      metaboliteSet = result_mets_1
-    } else if (step==3){
-      metaboliteSet = result_mets_3
-    } else {
-      metaboliteSet = result_mets_0
-    }
-    
-    if (!is.null(metaboliteSet)){
-      if (is.null(dim(metaboliteSet))){
-        metaboliteSet=data.frame(t(metaboliteSet))
-      }
-    }  
-    
-    ##################################################
-    # temporarily work around to be fixed in findMetabolicEnvironment
-    index = which(is.na(metaboliteSet[,"hmdb"]))
-    if (length(index)>0) metaboliteSet[index,"hmdb"] = "character(0)"
-    ##################################################
-    
-    ########### Recon 2.0 ############################
-    index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-    
-    # pressent in BridgeDB?
-    index.sub = which(metaboliteSet[index,"kegg"] != "character(0)")
-    kegg_id = metaboliteSet[index[index.sub],"kegg"]
-    
-    mapper = loadDatabase("./db/BridgeDB/metabolites_20150717.bridge")
-    hmdb = getSystemCode("HMDB")
-    kegg = getSystemCode("KEGG Compound")
-    
-    if (length(kegg_id)>0){
-      for (k in 1:length(kegg_id)){
-        if (!is.null(unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]) 
-      }
-    }  
-    
-    index = which(metaboliteSet[,"hmdb"] == "character(0)")
-    index.sub = which(metaboliteSet[index,"chebi"] != "character(0)")
-    chebi_id = metaboliteSet[index[index.sub],"chebi"]
-    
-    chebi = getSystemCode("ChEBI")
-    
-    if (length(chebi_id)>0){
-      for (k in 1:length(chebi_id)){
-        if (!is.null(unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]) 
-      }
-    }
-    
-    index = which(metaboliteSet[,"hmdb"] == "character(0)") 
-    if (length(index)>0) metaboliteSet = metaboliteSet[-index,,drop=FALSE]
-    #######################################################
-    
-    #     ########### Recon 2.2 ############################
-    #     inchi = metaboliteSet[,"InChI_key"]
-    #     chebi_id = metaboliteSet[,"chebi"]
-    #     index=which((is.na(chebi_id)&is.na(inchi)))
-    #     if (length(index)>0){
-    #       metaboliteSet = metaboliteSet[-index,]
-    #     }
-    #     #######################################################
-    
-    # Add glycine and carnitine conjugates to CoA compounds
-    #addConjugates(metaboliteSet)
-    
-    #     if (!is.null(metaboliteSet) && (dim(metaboliteSet)[1]!=0)){
-    #       if (is.null(dim(metaboliteSet))){
-    #         metaboliteSet=data.frame(t(metaboliteSet))
-    #       }
-    
-    # nMets=c(nMets, dim(metaboliteSet)[1])
-    nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
-    # message(paste("gene: ", gene_in))
-    # message(paste("metaboliteSet: ", dim(metaboliteSet)[1]))
-    
-    #     Warning messages:
-    #       1: In data.row.names(row.names, rowsi, i) :
-    #       some row.names duplicated: 6 --> row.names NOT used
-    #     2: In data.row.names(row.names, rowsi, i) :
-    #       some row.names duplicated: 17 --> row.names NOT used
-    
-    
-    # which(is.na(p.values[1,]))
-    
-    retVal = performMSEAenv(metaboliteSet, p.values, patients[i], gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, 2, top, id, adductsSummed)
-    
-    p_value = as.numeric(retVal$p.value)
-    if (length(p_value)==0){
-      p_value=NA
-    }
-    
-    metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste("P", patients[i], sep=""), "metabolite.set"=gene_in))
-    
-  }
-  
-  tmp=data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-  # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
-  
-  if (!is.null(genes)){
-    tmp1 = tmp[order(tmp[,"p.value"]),]
-    
-    dummy = c(NA,0,0)
-    for (l in 1:(100-dim(tmp)[1])){
-      tmp1 = rbind(tmp1,dummy) 
-    }
-    
-    overview = rbind(overview, t(tmp1))
-  }
-  
-  # # rank
-  # index.rank = min(which(tmp2[1,]%in%unlist(genes[i])))
-  # rank = rank + index.rank 
-  # p_value_sum = p_value_sum + as.numeric(tmp2[2,index.rank]) 
-  ##########################################################################################################
-}
-# if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
-# rank = rank/length(patients)
-# save(rank, p_value_sum, file=paste(path,"/rank.RData",sep=""))
-Sys.time()
-
+# 
+# 
+# ########################################################################
+# ########################################################################
+# ########################################################################
+# path="./results/crossomics_Fisher_Weighted"
+# # dir.create(path, showWarnings = FALSE)
+# overview = NULL
+# 
+# for (i in 1:length(patients)){
+#   
+#   ######################## MSEA Revon2 neighbourhood ######################################################
+#   # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
+#   # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
+#   
+#   # message(paste("Patient", patients[i]))
+#   
+#   # subset to 1 patient!
+#   p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
+#                                 grep("C", colnames(p.values.assi.all), fixed=TRUE),
+#                                 which(colnames(p.values.assi.all)=="avg.int.controls"))] 
+#   
+#   load(paste0("./results/mss_",genes[i][[1]][1],i,".RData"))
+#   
+#   metSetResult = NULL
+#   nMets = NULL
+#   
+#   #   for (j in 1:dim(gene_map_table)[1]){
+#   for (j in 1:length(mss)){
+#     
+#     if (!file.exists(paste(path2, mss[j], sep="/"))) next
+#     
+#     load(paste(path2, mss[j], sep="/"))
+#     gene_in=strsplit(mss[j], split = "." , fixed=TRUE)[[1]][1]
+#     
+#     # A lot of missing HMDB identifiers!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#     # metaboliteSet = retVal$mets
+#     if (step==2){
+#       metaboliteSet = result_mets_2
+#     } else if (step==1){
+#       metaboliteSet = result_mets_1
+#     } else if (step==3){
+#       metaboliteSet = result_mets_3
+#     } else {
+#       metaboliteSet = result_mets_0
+#     }
+#     
+#     if (!is.null(metaboliteSet)){
+#       if (is.null(dim(metaboliteSet))){
+#         metaboliteSet=data.frame(t(metaboliteSet))
+#       }
+#     }  
+#     
+#     ##################################################
+#     # temporarily work around to be fixed in findMetabolicEnvironment
+#     index = which(is.na(metaboliteSet[,"hmdb"]))
+#     if (length(index)>0) metaboliteSet[index,"hmdb"] = "character(0)"
+#     ##################################################
+#     
+#     ########### Recon 2.0 ############################
+#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
+#     
+#     # pressent in BridgeDB?
+#     index.sub = which(metaboliteSet[index,"kegg"] != "character(0)")  # ME filter metaboliteSet for empty Kegg 
+#     kegg_id = metaboliteSet[index[index.sub],"kegg"] # ME get kegg_id's for metaboliteSet
+#     
+#     mapper = loadDatabase("./db/BridgeDB/metabolites_20150717.bridge")
+#     hmdb = getSystemCode("HMDB")  
+#     kegg = getSystemCode("KEGG Compound") 
+#     
+#     if (length(kegg_id)>0){
+#       for (k in 1:length(kegg_id)){
+#         if (!is.null(unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]) 
+#       }
+#     }  
+#     
+#     index = which(metaboliteSet[,"hmdb"] == "character(0)")
+#     index.sub = which(metaboliteSet[index,"chebi"] != "character(0)")
+#     chebi_id = metaboliteSet[index[index.sub],"chebi"]
+#     
+#     chebi = getSystemCode("ChEBI")# ME system code for chebi ??
+#     
+#     if (length(chebi_id)>0){
+#       for (k in 1:length(chebi_id)){
+#         if (!is.null(unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]) 
+#       }
+#     }
+#     
+#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
+#     if (length(index)>0) metaboliteSet = metaboliteSet[-index,,drop=FALSE]
+#     #######################################################
+#     
+#     #     ########### Recon 2.2 ############################
+#     #     inchi = metaboliteSet[,"InChI_key"]
+#     #     chebi_id = metaboliteSet[,"chebi"]
+#     #     index=which((is.na(chebi_id)&is.na(inchi)))
+#     #     if (length(index)>0){
+#     #       metaboliteSet = metaboliteSet[-index,]
+#     #     }
+#     #     #######################################################
+#     
+#     # Add glycine and carnitine conjugates to CoA compounds
+#     #addConjugates(metaboliteSet)
+#     
+#     #     if (!is.null(metaboliteSet) && (dim(metaboliteSet)[1]!=0)){
+#     #       if (is.null(dim(metaboliteSet))){
+#     #         metaboliteSet=data.frame(t(metaboliteSet))
+#     #       }
+#     
+#     # nMets=c(nMets, dim(metaboliteSet)[1])
+#     nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
+#     # message(paste("gene: ", gene_in))
+#     # message(paste("metaboliteSet: ", dim(metaboliteSet)[1]))
+#     
+#     #     Warning messages:
+#     #       1: In data.row.names(row.names, rowsi, i) :
+#     #       some row.names duplicated: 6 --> row.names NOT used
+#     #     2: In data.row.names(row.names, rowsi, i) :
+#     #       some row.names duplicated: 17 --> row.names NOT used
+#     
+#     
+#     # which(is.na(p.values[1,]))
+#     
+#     retVal = performMSEA(metaboliteSet, p.values, patients[i], gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, 3, top, id, adductsSummed)
+#     
+#     p_value = as.numeric(retVal$p.value)
+#     if (length(p_value)==0){
+#       p_value=NA
+#     }
+#     
+#     metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste("P", patients[i], sep=""), "metabolite.set"=gene_in))
+#     
+#   }
+#   
+#   tmp=data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
+#   # genExcelFileShort(tmp[order(as.numeric(tmp[,"p.value"])),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
+#   
+#   if (!is.null(genes)){
+#     tmp1 = tmp[order(tmp[,"p.value"]),]
+#     
+#     dummy = c(NA,0,0)
+#     for (l in 1:(100-dim(tmp)[1])){
+#       tmp1 = rbind(tmp1,dummy) 
+#     }
+#     
+#     overview = rbind(overview, t(tmp1))
+#   }
+#   
+#   # # rank
+#   # index.rank = min(which(tmp2[1,]%in%unlist(genes[i])))
+#   # rank = rank + index.rank 
+#   # p_value_sum = p_value_sum + as.numeric(tmp2[2,index.rank]) 
+#   ##########################################################################################################
+# }
+# # if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
+# # rank = rank/length(patients)
+# # save(rank, p_value_sum, file=paste(path,"/rank.RData",sep=""))
+# Sys.time()
+# 
+# ########################################################################
+# ########################################################################
+# ########################################################################
+# path="./results/crossomics_Hyper"
+# # dir.create(path, showWarnings = FALSE)
+# overview = NULL
+# 
+# for (i in 1:length(patients)){
+#   
+#   ######################## MSEA Revon2 neighbourhood ######################################################
+#   # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
+#   # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
+#   
+#   # message(paste("Patient", patients[i]))
+#   
+#   # subset to 1 patient!
+#   p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
+#                                 grep("C", colnames(p.values.assi.all), fixed=TRUE),
+#                                 which(colnames(p.values.assi.all)=="avg.int.controls"))] 
+#   
+#   load(paste0("./results/mss_",genes[i],i,".RData"))
+#   
+#   metSetResult = NULL
+#   nMets = NULL
+#   
+#   #   for (j in 1:dim(gene_map_table)[1]){
+#   for (j in 1:length(mss)){
+#     
+#     if (!file.exists(paste(path2, mss[j], sep="/"))) next
+#     
+#     load(paste(path2, mss[j], sep="/"))
+#     gene_in=strsplit(mss[j], split = "." , fixed=TRUE)[[1]][1]
+#     
+#     # A lot of missing HMDB identifiers!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#     # metaboliteSet = retVal$mets
+#     if (step==2){
+#       metaboliteSet = result_mets_2
+#     } else if (step==1){
+#       metaboliteSet = result_mets_1
+#     } else if (step==3){
+#       metaboliteSet = result_mets_3
+#     } else {
+#       metaboliteSet = result_mets_0
+#     }
+#     
+#     if (!is.null(metaboliteSet)){
+#       if (is.null(dim(metaboliteSet))){
+#         metaboliteSet=data.frame(t(metaboliteSet))
+#       }
+#     }  
+#     
+#     ##################################################
+#     # temporarily work around to be fixed in findMetabolicEnvironment
+#     index = which(is.na(metaboliteSet[,"hmdb"]))
+#     if (length(index)>0) metaboliteSet[index,"hmdb"] = "character(0)"
+#     ##################################################
+#     
+#     ########### Recon 2.0 ############################
+#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
+#     
+#     # pressent in BridgeDB?
+#     index.sub = which(metaboliteSet[index,"kegg"] != "character(0)")
+#     kegg_id = metaboliteSet[index[index.sub],"kegg"]
+#     
+#     mapper = loadDatabase("./db/BridgeDB/metabolites_20150717.bridge")
+#     hmdb = getSystemCode("HMDB")
+#     kegg = getSystemCode("KEGG Compound")
+#     
+#     if (length(kegg_id)>0){
+#       for (k in 1:length(kegg_id)){
+#         if (!is.null(unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]) 
+#       }
+#     }  
+#     
+#     index = which(metaboliteSet[,"hmdb"] == "character(0)")
+#     index.sub = which(metaboliteSet[index,"chebi"] != "character(0)")
+#     chebi_id = metaboliteSet[index[index.sub],"chebi"]
+#     
+#     chebi = getSystemCode("ChEBI")
+#     
+#     if (length(chebi_id)>0){
+#       for (k in 1:length(chebi_id)){
+#         if (!is.null(unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]) 
+#       }
+#     }
+#     
+#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
+#     if (length(index)>0) metaboliteSet = metaboliteSet[-index,,drop=FALSE]
+#     #######################################################
+#     
+#     #     ########### Recon 2.2 ############################
+#     #     inchi = metaboliteSet[,"InChI_key"]
+#     #     chebi_id = metaboliteSet[,"chebi"]
+#     #     index=which((is.na(chebi_id)&is.na(inchi)))
+#     #     if (length(index)>0){
+#     #       metaboliteSet = metaboliteSet[-index,]
+#     #     }
+#     #     #######################################################
+#     
+#     # Add glycine and carnitine conjugates to CoA compounds
+#     #addConjugates(metaboliteSet)
+#     
+#     #     if (!is.null(metaboliteSet) && (dim(metaboliteSet)[1]!=0)){
+#     #       if (is.null(dim(metaboliteSet))){
+#     #         metaboliteSet=data.frame(t(metaboliteSet))
+#     #       }
+#     
+#     # nMets=c(nMets, dim(metaboliteSet)[1])
+#     nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
+#     # message(paste("gene: ", gene_in))
+#     # message(paste("metaboliteSet: ", dim(metaboliteSet)[1]))
+#     
+#     #     Warning messages:
+#     #       1: In data.row.names(row.names, rowsi, i) :
+#     #       some row.names duplicated: 6 --> row.names NOT used
+#     #     2: In data.row.names(row.names, rowsi, i) :
+#     #       some row.names duplicated: 17 --> row.names NOT used
+#     
+#     
+#     # which(is.na(p.values[1,]))
+#     
+#     retVal = performMSEAenv(metaboliteSet, p.values, patients[i], gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, 1, top, id, adductsSummed)
+#     
+#     p_value = as.numeric(retVal$p.value)
+#     if (length(p_value)==0){
+#       p_value=NA
+#     }
+#     
+#     metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste("P", patients[i], sep=""), "metabolite.set"=gene_in))
+#     
+#   }
+#   
+#   tmp=data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
+#   # genExcelFileShort(tmp[order(as.numeric(tmp[,"p.value"])),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
+#   
+#   if (!is.null(genes)){
+#     tmp1 = tmp[order(tmp[,"p.value"]),]
+#     
+#     dummy = c(NA,0,0)
+#     for (l in 1:(100-dim(tmp)[1])){
+#       tmp1 = rbind(tmp1,dummy) 
+#     }
+#     
+#     overview = rbind(overview, t(tmp1))
+#   }
+#   
+#   # # rank
+#   # index.rank = min(which(tmp2[1,]%in%unlist(genes[i])))
+#   # rank = rank + index.rank 
+#   # p_value_sum = p_value_sum + as.numeric(tmp2[2,index.rank]) 
+#   ##########################################################################################################
+# }
+# # if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
+# # rank = rank/length(patients)
+# # save(rank, p_value_sum, file=paste(path,"/rank.RData",sep=""))
+# Sys.time()
+# 
+# ########################################################################
+# ########################################################################
+# ########################################################################
+# path="./results/crossomics_Hyper_Weighted"
+# # dir.create(path, showWarnings = FALSE)
+# overview = NULL
+# 
+# for (i in 1:length(patients)){
+#   
+#   ######################## MSEA Revon2 neighbourhood ######################################################
+#   # dir.create(paste(path,"/P",patients[i], sep=""), showWarnings = FALSE)
+#   # dir.create(paste(path,"/P",patients[i],"/Recon2", sep=""), showWarnings = FALSE)
+#   
+#   # message(paste("Patient", patients[i]))
+#   
+#   # subset to 1 patient!
+#   p.values=p.values.assi.all[,c(grep(paste("P",patients[i],sep=""), colnames(p.values.assi.all), fixed=TRUE),
+#                                 grep("C", colnames(p.values.assi.all), fixed=TRUE),
+#                                 which(colnames(p.values.assi.all)=="avg.int.controls"))] 
+#   
+#   load(paste0("./results/mss_",genes[i],i,".RData"))
+#   
+#   metSetResult = NULL
+#   nMets = NULL
+#   
+#   #   for (j in 1:dim(gene_map_table)[1]){
+#   for (j in 1:length(mss)){
+#     
+#     if (!file.exists(paste(path2, mss[j], sep="/"))) next
+#     
+#     load(paste(path2, mss[j], sep="/"))
+#     gene_in=strsplit(mss[j], split = "." , fixed=TRUE)[[1]][1]
+#     
+#     # A lot of missing HMDB identifiers!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#     # metaboliteSet = retVal$mets
+#     if (step==2){
+#       metaboliteSet = result_mets_2
+#     } else if (step==1){
+#       metaboliteSet = result_mets_1
+#     } else if (step==3){
+#       metaboliteSet = result_mets_3
+#     } else {
+#       metaboliteSet = result_mets_0
+#     }
+#     
+#     if (!is.null(metaboliteSet)){
+#       if (is.null(dim(metaboliteSet))){
+#         metaboliteSet=data.frame(t(metaboliteSet))
+#       }
+#     }  
+#     
+#     ##################################################
+#     # temporarily work around to be fixed in findMetabolicEnvironment
+#     index = which(is.na(metaboliteSet[,"hmdb"]))
+#     if (length(index)>0) metaboliteSet[index,"hmdb"] = "character(0)"
+#     ##################################################
+#     
+#     ########### Recon 2.0 ############################
+#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
+#     
+#     # pressent in BridgeDB?
+#     index.sub = which(metaboliteSet[index,"kegg"] != "character(0)")
+#     kegg_id = metaboliteSet[index[index.sub],"kegg"]
+#     
+#     mapper = loadDatabase("./db/BridgeDB/metabolites_20150717.bridge")
+#     hmdb = getSystemCode("HMDB")
+#     kegg = getSystemCode("KEGG Compound")
+#     
+#     if (length(kegg_id)>0){
+#       for (k in 1:length(kegg_id)){
+#         if (!is.null(unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, kegg, kegg_id[k], hmdb)[1]) 
+#       }
+#     }  
+#     
+#     index = which(metaboliteSet[,"hmdb"] == "character(0)")
+#     index.sub = which(metaboliteSet[index,"chebi"] != "character(0)")
+#     chebi_id = metaboliteSet[index[index.sub],"chebi"]
+#     
+#     chebi = getSystemCode("ChEBI")
+#     
+#     if (length(chebi_id)>0){
+#       for (k in 1:length(chebi_id)){
+#         if (!is.null(unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]))) metaboliteSet[index[index.sub[k]],"hmdb"] = unlist(map(mapper, chebi, chebi_id[k], hmdb)[1]) 
+#       }
+#     }
+#     
+#     index = which(metaboliteSet[,"hmdb"] == "character(0)") 
+#     if (length(index)>0) metaboliteSet = metaboliteSet[-index,,drop=FALSE]
+#     #######################################################
+#     
+#     #     ########### Recon 2.2 ############################
+#     #     inchi = metaboliteSet[,"InChI_key"]
+#     #     chebi_id = metaboliteSet[,"chebi"]
+#     #     index=which((is.na(chebi_id)&is.na(inchi)))
+#     #     if (length(index)>0){
+#     #       metaboliteSet = metaboliteSet[-index,]
+#     #     }
+#     #     #######################################################
+#     
+#     # Add glycine and carnitine conjugates to CoA compounds
+#     #addConjugates(metaboliteSet)
+#     
+#     #     if (!is.null(metaboliteSet) && (dim(metaboliteSet)[1]!=0)){
+#     #       if (is.null(dim(metaboliteSet))){
+#     #         metaboliteSet=data.frame(t(metaboliteSet))
+#     #       }
+#     
+#     # nMets=c(nMets, dim(metaboliteSet)[1])
+#     nMets=c(nMets, length(unique(metaboliteSet[,"hmdb"])))
+#     # message(paste("gene: ", gene_in))
+#     # message(paste("metaboliteSet: ", dim(metaboliteSet)[1]))
+#     
+#     #     Warning messages:
+#     #       1: In data.row.names(row.names, rowsi, i) :
+#     #       some row.names duplicated: 6 --> row.names NOT used
+#     #     2: In data.row.names(row.names, rowsi, i) :
+#     #       some row.names duplicated: 17 --> row.names NOT used
+#     
+#     
+#     # which(is.na(p.values[1,]))
+#     
+#     retVal = performMSEAenv(metaboliteSet, p.values, patients[i], gene_in, n_patients, thresh_F_pos, thresh_F_neg, path, 2, top, id, adductsSummed)
+#     
+#     p_value = as.numeric(retVal$p.value)
+#     if (length(p_value)==0){
+#       p_value=NA
+#     }
+#     
+#     metSetResult = rbind(metSetResult, c("p.value"=p_value, "patient"=paste("P", patients[i], sep=""), "metabolite.set"=gene_in))
+#     
+#   }
+#   
+#   tmp=data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
+#   # genExcelFileShort(tmp[order(tmp[,"p.value"]),], paste(path,"/P",patients[i],"/Recon2/MSEA_results.xls",sep=""))
+#   
+#   if (!is.null(genes)){
+#     tmp1 = tmp[order(tmp[,"p.value"]),]
+#     
+#     dummy = c(NA,0,0)
+#     for (l in 1:(100-dim(tmp)[1])){
+#       tmp1 = rbind(tmp1,dummy) 
+#     }
+#     
+#     overview = rbind(overview, t(tmp1))
+#   }
+#   
+#   # # rank
+#   # index.rank = min(which(tmp2[1,]%in%unlist(genes[i])))
+#   # rank = rank + index.rank 
+#   # p_value_sum = p_value_sum + as.numeric(tmp2[2,index.rank]) 
+#   ##########################################################################################################
+# }
+# # if (!is.null(genes)) genExcelFileShort(overview, paste(path,"/MSEA_overview.xls",sep=""))
+# # rank = rank/length(patients)
+# # save(rank, p_value_sum, file=paste(path,"/rank.RData",sep=""))
+# Sys.time()
+# 
