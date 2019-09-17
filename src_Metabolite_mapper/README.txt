@@ -7,6 +7,8 @@ IN GENERAL:
 
 This repository is for all necessary Crossomics Metabolite Mapper scripts. The data used and the mock genes are in the parent folders (Crossomics/Data and Crossomics/Results, the latter for the mock genes). Intensity values for the different metabolomics projects can be found on the Metab (Y:) drive, but I copy them to my Crossomics/Data.
 
+Important note on creating mock gene sets (see OTHER SCRIPTS)
+
 
 HOW TO USE:
 
@@ -44,7 +46,7 @@ Other scripts do not have any use in the Metabolite_Mapper script and are moved 
 
 OTHER SCRIPTS
 
-** The CreateMockGeneSet.R script creates mock gene text files with the seed and number of mock genes in the file title.
+** The CreateMockGeneSet.R script creates mock gene text files with the seed and number of mock genes in the file title. IMPORTANT NOTE: these need to be remade every time a new set of patients is used. The patient-data is one of the inputs and this script makes sure that none of the disease genes is present in the mock gene sets.
 ** CreatePatientSubset.R is not used atm, but works the same way as CreateMockGeneSet, but then for patients
 ** TranslateToHMDB.R is a script that simply translates all chebi and kegg codes within the metabolite set files to HMDB. It should be run locally after creating the metabolite sets to ensure that the metabolite mapper is able to be run without Java.
 
