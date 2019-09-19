@@ -56,9 +56,12 @@ digit_significance <- 3
 # Exclude patients / diseases
 NoTrans <- FALSE
 subset_patients <- FALSE
+trainingset <- NULL # possible: TRUE, FALSE, NULL (for all data)
 
 # Date of data
-date <- "2019-09-03"
+date <- "2019-09-11"
+
+#
 
 
 
@@ -67,8 +70,10 @@ date <- "2019-09-03"
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ##### Read data -----------------------------------------------------------
+train_val <- ifelse(trainingset, "trainingset", "validationset")
+if(is.null(train_val)) train_val <- "all"
 code_dir <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Results/")
-DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled.RDS")))
+DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
 
 ##### Determine parameters ------------------------------------------------
 # temp$size_f = factor(temp$size, levels=c('50%','100%','150%','200%'))
@@ -311,7 +316,7 @@ p <- ggplot(DT_per_parameter, aes(x = Step)) +
                      labels = c("In Top 15", "Missed"),
                      values=c(my_greens[4],'RED'))
 z <- pretty_plot(p, theme = "dark")
-ggsave(paste0(outdir_name,"/Ranks_And_Missed_Top15_",var_name,"_",sub_name,".png"), plot = z,
+ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_Top15_",var_name,"_",sub_name,".png"), plot = z,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 # Single panel from big facet plot (top 2, 5, 10 and 15)
@@ -348,7 +353,7 @@ p <- p + theme_dark() +
   guides(colour = guide_legend(order = 1, reverse = TRUE),
          fill = guide_legend(order = 2, reverse = TRUE))
 # colour = adjustcolor(my_greens[4],alpha.f=0.5), fill = my_greens[4], alpha="0.5"
-ggsave(paste0(outdir_name,"/Ranks_And_Missed_Single_Par_Comb",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_Single_Par_Comb",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -387,57 +392,71 @@ p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_lab
   geom_point(data = DT_per_parameter[DT_per_parameter$best10 ==1, ],aes(x=Step, y=Prior.frac10),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black") +
   geom_point(data = DT_per_parameter[DT_per_parameter$best05 ==1, ],aes(x=Step, y=Prior.frac05),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black") +
   geom_point(data = DT_per_parameter[DT_per_parameter$best02 ==1, ],aes(x=Step, y=Prior.frac02),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black")
+
+p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best15==1, ],
+                   aes(x=Step, y=Prior.frac15, label = signif(Prior.frac15, digits = digit_significance), group = best15),
+                   size=3, colour = my_greens[4], position = position_dodge(width = 2), vjust = -0.5)
+p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best10==1, ],
+                   aes(x=Step, y=Prior.frac10, label = signif(Prior.frac10, digits = digit_significance), group = best10),
+                   size=3, colour = my_greens[3], position = position_dodge(width = 2), vjust = -0.5)
+p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best05==1, ],
+                   aes(x=Step, y=Prior.frac05, label = signif(Prior.frac05, digits = digit_significance), group = best05),
+                   size=3, colour = my_greens[2], position = position_dodge(width = 2), vjust = -0.5)
+p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best02==1, ],
+                   aes(x=Step, y=Prior.frac02, label = signif(Prior.frac02, digits = digit_significance), group = best02),
+                   size=3, colour = my_greens[1], position = position_dodge(width = 2), vjust = -0.5)
 p <- p + theme_dark() + 
   ylab("Disease genes / Total dis. genes") +
   xlab("Max distance to primary reaction") +
+  ylim(0, 1) +
   ggtitle("Correct disease gene prioritisation") +
   scale_color_manual(name = "Prioritised Genes",
                      labels = c("In Top 2", "In Top 5", "In Top 10", "In Top 15", "Missed"),
                      values=c(my_greens,'RED'))
 p <- pretty_plot(p, theme = "dark")
-ggsave(paste0(outdir_name,"/Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
-# Average of top 50 genes -------------------------------------------------
-p <- ggplot(DT_per_parameter, aes(label=Av_top50)) +
-  geom_line(aes(x = Step, y = Av_top50, colour = "Average", group = 1), size = 1.3) +
-  geom_point(aes(x = Step, y = Av_top50, colour = "Average"), size=0.5) +
-  geom_line(aes(x = Step, y = Out_top50/(In_top50+Out_top50)*15, colour = "Frac.OutTop", group = 1), size = 1.3) +
-  geom_point(aes(x = Step, y = Out_top50/(In_top50+Out_top50)*15, colour = "Frac.OutTop"), size=0.5) +
-  scale_y_continuous(limits = c(0,50), sec.axis = sec_axis(~./15, name = "Frac. genes outside top 50", breaks = c(0, 0.5, 1))) +
-  theme_dark() +
-  scale_color_manual(name = "",
-                     labels = c("Av. rank of top 50", "Frac. outside top 50"),
-                     values=c('Black', my_greens[3]))
-p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) 
-# geom_point(data = DT_per_parameter[best_av50==TRUE, ],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = "black")+
-p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==1),],aes(x=Step, y=Av_top50, shape = "Best"), size=8, ) + 
-  scale_shape_manual(name = "",
-                     labels = "Best param.\nperformance",
-                     values = 42)
-for(i in c(1:5)){
-  p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==i),],aes(x=Step, y=Av_top50, shape = "Best"), shape = "*", size=8, colour = my_sig_palette[i])
-  p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==i),],
-                     aes(x=Step, y=Av_top50, label = signif(Av_top50, digits = digit_significance), group = best_order), 
-                     size=3, 
-                     # show.legend = FALSE, 
-                     colour = my_sig_palette[i],
-                     position = position_dodge(width = 2),
-                     vjust = -0.5)
-}
-
-p <- p + 
-  ylab("Average disease gene rank") +
-  xlab("Max. distance to primary reaction") +
-  ggtitle("Av. gene rank for top 50 genes") + 
-  geom_hline(yintercept=10, linetype="dashed", color = "salmon") +
-  guides(shape = guide_legend(order = 1),
-         colour = guide_legend(order = 2)) 
-z <- pretty_plot(p, theme = "dark")
-
-ggsave(paste0(outdir_name,"/Top50_",var_name,"_",sub_name,".png"), plot = z,
-       width = 300, height = 200, dpi=resolution, units = "mm")
+# # Average of top 50 genes -------------------------------------------------
+# p <- ggplot(DT_per_parameter, aes(label=Av_top50)) +
+#   geom_line(aes(x = Step, y = Av_top50, colour = "Average", group = 1), size = 1.3) +
+#   geom_point(aes(x = Step, y = Av_top50, colour = "Average"), size=0.5) +
+#   geom_line(aes(x = Step, y = Out_top50/(In_top50+Out_top50)*15, colour = "Frac.OutTop", group = 1), size = 1.3) +
+#   geom_point(aes(x = Step, y = Out_top50/(In_top50+Out_top50)*15, colour = "Frac.OutTop"), size=0.5) +
+#   scale_y_continuous(limits = c(0,50), sec.axis = sec_axis(~./15, name = "Frac. genes outside top 50", breaks = c(0, 0.5, 1))) +
+#   theme_dark() +
+#   scale_color_manual(name = "",
+#                      labels = c("Av. rank of top 50", "Frac. outside top 50"),
+#                      values=c('Black', my_greens[3]))
+# p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) 
+# # geom_point(data = DT_per_parameter[best_av50==TRUE, ],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = "black")+
+# p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==1),],aes(x=Step, y=Av_top50, shape = "Best"), size=8, ) + 
+#   scale_shape_manual(name = "",
+#                      labels = "Best param.\nperformance",
+#                      values = 42)
+# for(i in c(1:5)){
+#   p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==i),],aes(x=Step, y=Av_top50, shape = "Best"), shape = "*", size=8, colour = my_sig_palette[i])
+#   p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order"]==i),],
+#                      aes(x=Step, y=Av_top50, label = signif(Av_top50, digits = digit_significance), group = best_order), 
+#                      size=3, 
+#                      # show.legend = FALSE, 
+#                      colour = my_sig_palette[i],
+#                      position = position_dodge(width = 2),
+#                      vjust = -0.5)
+# }
+# 
+# p <- p + 
+#   ylab("Average disease gene rank") +
+#   xlab("Max. distance to primary reaction") +
+#   ggtitle("Av. gene rank for top 50 genes") + 
+#   geom_hline(yintercept=10, linetype="dashed", color = "salmon") +
+#   guides(shape = guide_legend(order = 1),
+#          colour = guide_legend(order = 2)) 
+# z <- pretty_plot(p, theme = "dark")
+# 
+# ggsave(paste0(outdir_name,"/",train_val,"_Top50_",var_name,"_",sub_name,".png"), plot = z,
+#        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
 ##### Average rank non-missed genes + total missed genes ------------------
@@ -476,7 +495,7 @@ p <- p +
   guides(shape = guide_legend(order = 1),
          colour = guide_legend(order = 2)) 
 p <- pretty_plot(p, theme = "dark")
-ggsave(paste0(outdir_name,"/Ranks_Non_Missed_And_Missed",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Ranks_Non_Missed_And_Missed",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -522,7 +541,7 @@ p <- p + scale_color_manual(name = "Non-missed genes",
                             labels = c("Per-patient rank"),
                             values=c("blue"))
 p <- pretty_plot(p, secondary_y_axis = FALSE, theme = "dark")
-ggsave(paste0(outdir_name,"/Average_Patient_And_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Average_Patient_And_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -545,7 +564,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Av_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Av_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Av_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -563,7 +582,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Sd_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Sd_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -580,7 +599,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Av_Rel_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Av_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Av_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -597,7 +616,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_Rel_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Sd_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Sd_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -614,7 +633,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Av_Rev_Rel_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Av_Rev_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Av_Rev_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -631,7 +650,7 @@ p <- ggplot(data = DT_per_patient, aes(x = Step, y = Sd_Rev_Rel_rank)) +
          fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p)
-ggsave(paste0(outdir_name,"/Sd_Rev_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Sd_Rev_Rel_Rank_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
@@ -652,6 +671,6 @@ p <- ggplot(data = DT_per_parameter, aes(x = Step)) +
          # fill = guide_legend(order = 2)) +
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs))
 p <- pretty_plot(p, secondary_y_axis = TRUE)
-ggsave(paste0(outdir_name,"/Av_Rank_Sd_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
+ggsave(paste0(outdir_name,"/",train_val,"_Av_Rank_Sd_Per_Patient_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
 

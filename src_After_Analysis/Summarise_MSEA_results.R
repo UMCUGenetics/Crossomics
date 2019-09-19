@@ -46,19 +46,31 @@ seeds <- c(8372, 2528, 6140, 3880, 2771,
            5600, 2359, 8353, 6399, 2001)
 patient_info_file <- "Crossomics_DBS_Marten_Training_Validation.RData"
 patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
-trainingset <- TRUE
+trainingset <- NULL # possible: TRUE, FALSE, NULL (for all data)
+
+
 
 
 ###########################################################################
 # Prepare data ------------------------------------------------------------
 ###########################################################################
 
+# Check if there are any patients that have re-analysed
+redo_index <- grep("REDO", list.files(paste0(code_dir,"/../Results/",date)))
+if(length(redo_index) > 0){
+  patients_redone <- NULL
+  for(ri in 1:length(redo_index)){
+    redo_file <- list.files(paste0(code_dir,"/../Results/",date))[redo_index[ri]]
+    patients_redone <- c(patients_redone, strsplit(redo_file, split = "_")[[1]][1])
+  }
+}
+
 load(paste0(code_dir,"/../Data/", patient_info_file))
 # xls_data <- xlsx::read.xlsx(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.xlsx"), sheetIndex = 1, colIndex = c(1:7), rowIndex = c(1:107), stringsAsFactors = FALSE)
 # save(xls_data, file = paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.RData"))
 
-if("Patient number in set" %in% colnames(xls_data)){
-  xls_data$Patient <- unlist(lapply(xls_data$`Patient number in set`, function(x) unlist(strsplit(x, split = "\\."))[1]))
+if("Patient.number.in.set" %in% colnames(xls_data)){
+  xls_data$Patient <- unlist(lapply(xls_data$`Patient.number.in.set`, function(x) unlist(strsplit(x, split = "\\."))[1]))
 } else if ("Patient.number" %in% colnames(xls_data)){
   xls_data$Patient <- unlist(lapply(xls_data$Patient.number, function(x) unlist(strsplit(x, split = "\\."))[1]))
 } else {
@@ -78,11 +90,12 @@ xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_p
 # xls_unique$Patient[nchar(xls_unique$Patient) == 2] <- fixed_patients
 
 # Remove patients/disease genes who are artifacts
-xls_unique <- xls_unique[Gene != "NA",]
+xls_unique <- xls_unique[Gene != "NA" & (is.na(xls_unique[,`Judith.`]) | `Judith.` == "Inclusion"),]
 
 # select test set or validation set & only non-exlusion patients
 which_set <- ifelse(trainingset == TRUE, "Training set", "Validation set")
-xls_unique <- xls_unique[`Type set` == which_set & (is.na(xls_unique[,`Judith:`]) | `Judith:` == "Inclusion"),]
+if(class(which_set) == "character") xls_unique <- xls_unique[`Type.set` == which_set ,]
+
 xls_unique <- as.data.table(xls_unique)
 
 DT <- NULL
@@ -101,9 +114,15 @@ for (i in 1:nrow(xls_unique)){
   cat("Patient:",patient,"\n")
   dis_gene <- xls_unique$Gene[i]
   dis_gene <- unlist(strsplit(dis_gene, split = "; "))
+  dis_gene <- gsub("^MUT$", "MMUT", dis_gene) # fix MMUT thing
   is_trans <- xls_unique$Gene.product.function[i] == "transporter"
   if(length(is_trans) == 0) is_trans <- NA
-  patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
+  if(!patient %in% patients_redone){
+    patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
+  } else {
+    patient_folder <- paste0(date,"/", patient, "_REDO_",xls_unique$Dataset[i])
+  }
+  # patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
   # patient_folder <- paste0(date,"_MSEA_results/", patient, "_",xls_unique$Dataset[i])
   path <- paste0(code_dir,"/../Results/",patient_folder)
   
@@ -184,9 +203,10 @@ DT[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
 DT[, Step:=factor(Step, levels = steps)]
 DT[, Protein_function:=as.factor(Protein_function)]
 
-if(trainingset){
+if(is.null(trainingset)){
+  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_all.RDS"))
+} else if(trainingset){
   saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_trainingset.RDS"))
 } else {
   saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_validationset.RDS"))
 }
-
