@@ -70,8 +70,11 @@ date <- "2019-09-11"
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ##### Read data -----------------------------------------------------------
-train_val <- ifelse(trainingset, "trainingset", "validationset")
-if(is.null(train_val)) train_val <- "all"
+if(is.null(trainingset)) {
+  train_val <- "all"
+} else {
+  train_val <- ifelse(trainingset, "trainingset", "validationset")
+}
 code_dir <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Results/")
 DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
 
@@ -148,6 +151,7 @@ DT[,c("Prioritised15","Prioritised10","Prioritised05","Prioritised02") :=
 # DT$Prioritised02 <- DT$Position <= 2
 # DT$Prioritised50 <- DT$Position <= 50
 DT[, PatientID := do.call(paste0,.SD), .SDcols=c("Patient","Gene")]
+DT[, Missed := P.value==1]
 
 # DT_noTrans <- DT
 # DT_noTrans <- DT_noTrans[Transporter==FALSE,,]
@@ -500,12 +504,59 @@ ggsave(paste0(outdir_name,"/",train_val,"_Ranks_Non_Missed_And_Missed",var_name,
 
 
 ##### all ranks, average rank and average standard deviation --------------
-DT_no_missed <- tmpDT[P.value < 1,]
-DT_missed <- tmpDT[P.value == 1,]
-p <- ggplot(DT_no_missed, aes(x = Step)) +
+# DT_no_missed <- tmpDT[P.value < 1,]
+# DT_missed <- tmpDT[P.value == 1,]
+# p <- ggplot(DT_no_missed, aes(x = Step)) +
+#   # geom_point(aes(y = Position), position=position_dodge(width = 5.5)) +
+#   geom_jitter(aes(y = Position, colour = "Per-patient rank"), size = 0.005) +
+#   geom_jitter(data =DT_missed, aes(x = Step, y = Position, fill = "Missed genes"), colour = "blue", size = 0.005, alpha = 0.2) +
+#   geom_line(data = DT_per_parameter, aes(x = Step, y = Av_non_missed, group = 1, colour = "Average rank")) +
+#   geom_errorbar(data = DT_per_parameter, aes(x = Step, 
+#                                              ymax = Av_non_missed + Av_Sd_excl_miss, 
+#                                              ymin = Av_non_missed - Av_Sd_excl_miss,
+#                                              colour = "Average rank"), 
+#                 # colour = "cornflowerblue",
+#                 width = 0.5) +
+#   ylim(c(0,40)) +
+#   geom_hline(aes(yintercept = 5), colour = "darksalmon", linetype="dashed") +
+#   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) +
+#   theme_dark() + 
+#   ylab("Disease gene rank") +
+#   xlab("Max distance to primary reaction") +
+#   ggtitle("Stability of method") +
+# geom_point(data = DT_per_parameter[DT_per_parameter$best_order_top05 ==1, ], aes(x=Step, y=35, shape = "Best"), size=8) + 
+#   scale_shape_manual(name = "",
+#                      labels = "Ratio dis.genes\nin top 5",
+#                      values = 42) 
+# for(i in c(1:5)){
+#   p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05"]==i),],aes(x=Step, y=35, shape = "Best"), shape = "*", size=8)
+#   p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05"]==i),],
+#                      aes(x=Step, y=35, label = signif(Prior.frac05, digits = digit_significance), group = best_order_top05),
+#                      size=3,
+#                      # show.legend = FALSE,
+#                      colour = my_sig_palette[6-i],
+#                      position = position_dodge(width = 2),
+#                      vjust = -0.5)
+# }
+# p <- p + scale_color_manual(name = "Non-missed genes",
+#                             labels = c("Average rank", "Per-patient rank"),
+#                             values=c("red","black")) + 
+#   scale_fill_manual(name = "Missed genes",
+#                             labels = c("Per-patient rank"),
+#                             values=c("blue"))
+# p <- pretty_plot(p, secondary_y_axis = FALSE, theme = "dark")
+# ggsave(paste0(outdir_name,"/",train_val,"_Average_Patient_And_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
+#        width = 300, height = 200, dpi=resolution, units = "mm")
+
+
+##### all ranks, average rank and average standard deviation --------------
+# p <- ggplot(tmpDT[Missed == FALSE], aes(x = Step)) +
+p <- ggplot(tmpDT, aes(x = Step)) +
   # geom_point(aes(y = Position), position=position_dodge(width = 5.5)) +
-  geom_jitter(aes(y = Position, colour = "Per-patient rank"), size = 0.005) +
-  geom_jitter(data =DT_missed, aes(x = Step, y = Position, fill = "Missed genes"), colour = "blue", size = 0.005, alpha = 0.2) +
+  # geom_jitter(data = tmpDT, aes(x = Step, y = Position, colour = Missed), size = 0.005, alpha = 0.2) +
+  geom_jitter(aes(y = Position, colour = Missed), size = 0.005, alpha = 0.2) +
+  # geom_jitter(aes(y = Position, colour = "Per-patient rank"), size = 0.005) +
+  # geom_jitter(data =DT_test[Missed == TRUE], aes(x = Step, y = Position, fill = "Missed genes"), colour = "blue", size = 0.005, alpha = 0.2) +
   geom_line(data = DT_per_parameter, aes(x = Step, y = Av_non_missed, group = 1, colour = "Average rank")) +
   geom_errorbar(data = DT_per_parameter, aes(x = Step, 
                                              ymax = Av_non_missed + Av_Sd_excl_miss, 
@@ -519,10 +570,10 @@ p <- ggplot(DT_no_missed, aes(x = Step)) +
   theme_dark() + 
   ylab("Disease gene rank") +
   xlab("Max distance to primary reaction") +
-  ggtitle("Stability of method") +
-geom_point(data = DT_per_parameter[DT_per_parameter$best_order_top05 ==1, ], aes(x=Step, y=35, shape = "Best"), size=8) + 
+  ggtitle("Gene prioritization performance") +
+  geom_point(data = DT_per_parameter[DT_per_parameter$best_order_top05 ==1, ], aes(x=Step, y=35, shape = "Best"), size=8) + 
   scale_shape_manual(name = "",
-                     labels = "Ratio dis.genes\nin top 5",
+                     labels = "Best ratios dis.genes\nin top 5",
                      values = 42) 
 for(i in c(1:5)){
   p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05"]==i),],aes(x=Step, y=35, shape = "Best"), shape = "*", size=8)
@@ -534,15 +585,38 @@ for(i in c(1:5)){
                      position = position_dodge(width = 2),
                      vjust = -0.5)
 }
-p <- p + scale_color_manual(name = "Non-missed genes",
-                            labels = c("Average rank", "Per-patient rank"),
-                            values=c("red","black")) + 
-  scale_fill_manual(name = "Missed genes",
-                            labels = c("Per-patient rank"),
-                            values=c("blue"))
-p <- pretty_plot(p, secondary_y_axis = FALSE, theme = "dark")
-ggsave(paste0(outdir_name,"/",train_val,"_Average_Patient_And_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
+p <- p + scale_color_manual(name = "Gene ranks",
+                            labels = c("Average non-missed", "Per patient", "Missed per patient"),
+                            values=c("red","black","blue")) 
+p <- p + guides(shape = guide_legend(override.aes = list(size = 5)),
+                color = guide_legend(override.aes = list(linetype=c(1,NA,NA), 
+                                                         shape=c(NA,16,16), 
+                                                         size = c(0.5,2,2),
+                                                         alpha = c(NA,1,1))))
+pp <- pretty_plot(p, secondary_y_axis = FALSE, theme = "dark")
+ggsave(paste0(outdir_name,"/",train_val,"_Average_Patient_And_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = pp,
        width = 300, height = 200, dpi=resolution, units = "mm")
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Special plots -----------------------------------------------------------
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+##### plot to show total number of genes with a metabolite set as function of the max_rxn and step
+
+DT_gene <- tmpDT[, list(Step, Z_threshold, Max_rxn, PatientID, Total_genes, Seed)]
+
+tot_genes_per_maxrxn <- data.table()
+tot_genes_per_maxrxn[, c("Max_rxn", "Av", "Sd") := 
+                       DT_gene[, list(mean(Total_genes), sd(Total_genes)), by = .(Max_rxn)]]
+test <- as.data.frame(tot_genes_per_maxrxn)
+
+ggplot(data = test, aes(x = Max_rxn, y = Av)) +
+  geom_line() 
+  # geom_errorbar(aes(ymax = Av + Sd, ymin = Av - Sd))
+
+
+
 
 
 
