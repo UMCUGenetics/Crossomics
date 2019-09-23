@@ -464,43 +464,43 @@ ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_",var_name,"_",sub_na
 
 
 ##### Average rank non-missed genes + total missed genes ------------------
-p <- ggplot(DT_per_parameter, aes(label=Av_non_missed)) +
-  geom_line(aes(x = Step, y = Av_non_missed, colour = "Average", group = 1), size = 1.3) +
-  geom_point(aes(x = Step, y = Av_non_missed, colour = "Average"), size=0.5) +
-  geom_line(aes(x = Step, y = Missed.frac*80, colour = "Frac.Missed", group = 1), size = 1.3) +
-  geom_point(aes(x = Step, y = Missed.frac*80, colour = "Frac.Missed"), size=0.5) +
-  scale_y_continuous(sec.axis = sec_axis(~./80, name = "Frac. genes Missed", breaks = c(0, 0.5, 1))) +
-  theme_dark() +
-  scale_color_manual(name = "",
-                     labels = c("Av. rank of non-missed genes", "Frac. Missed"),
-                     values=c('Black', my_greens[3]))
-p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) 
-# geom_point(data = DT_per_parameter[best_av50==TRUE, ],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = "black")+
-p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==1),],aes(x=Step, y=Av_non_missed, shape = "Best"), size=8, ) + 
-  scale_shape_manual(name = "",
-                     labels = "Best param.\nperformance \n(missed frac. <0.5)",
-                     values = 42)
-# Annotate the 5 best scoring parameter combinations (determined ~l.280)
-for(i in c(1:5)){
-  p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==i),],aes(x=Step, y=Av_non_missed, shape = "Best"), shape = "*", size=8, colour = my_sig_palette[i])
-  p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==i),],
-                     aes(x=Step, y=Av_non_missed, label = signif(Av_non_missed, digits = digit_significance), group = best_order_NM), 
-                     size=3, 
-                     # show.legend = FALSE, 
-                     colour = my_sig_palette[i],
-                     position = position_dodge(width = 2),
-                     vjust = -0.5)
-}
-p <- p + 
-  ylab("Average non-missed disease gene rank") +
-  xlab("Max. distance to primary reaction") +
-  ggtitle("Av. gene rank for non-missed genes") + 
-  geom_hline(yintercept=15, linetype="dashed", color = "salmon") +
-  guides(shape = guide_legend(order = 1),
-         colour = guide_legend(order = 2)) 
-p <- pretty_plot(p, theme = "dark")
-ggsave(paste0(outdir_name,"/",train_val,"_Ranks_Non_Missed_And_Missed",var_name,"_",sub_name,".png"), plot = p,
-       width = 300, height = 200, dpi=resolution, units = "mm")
+# p <- ggplot(DT_per_parameter, aes(label=Av_non_missed)) +
+#   geom_line(aes(x = Step, y = Av_non_missed, colour = "Average", group = 1), size = 1.3) +
+#   geom_point(aes(x = Step, y = Av_non_missed, colour = "Average"), size=0.5) +
+#   geom_line(aes(x = Step, y = Missed.frac*80, colour = "Frac.Missed", group = 1), size = 1.3) +
+#   geom_point(aes(x = Step, y = Missed.frac*80, colour = "Frac.Missed"), size=0.5) +
+#   scale_y_continuous(sec.axis = sec_axis(~./80, name = "Frac. genes Missed", breaks = c(0, 0.5, 1))) +
+#   theme_dark() +
+#   scale_color_manual(name = "",
+#                      labels = c("Av. rank of non-missed genes", "Frac. Missed"),
+#                      values=c('Black', my_greens[3]))
+# p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) 
+# # geom_point(data = DT_per_parameter[best_av50==TRUE, ],aes(x=Step, y=Av_top50),shape = "*", size=8, show.legend = FALSE, colour = "black")+
+# p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==1),],aes(x=Step, y=Av_non_missed, shape = "Best"), size=8, ) + 
+#   scale_shape_manual(name = "",
+#                      labels = "Best param.\nperformance \n(missed frac. <0.5)",
+#                      values = 42)
+# # Annotate the 5 best scoring parameter combinations (determined ~l.280)
+# for(i in c(1:5)){
+#   p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==i),],aes(x=Step, y=Av_non_missed, shape = "Best"), shape = "*", size=8, colour = my_sig_palette[i])
+#   p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_NM"]==i),],
+#                      aes(x=Step, y=Av_non_missed, label = signif(Av_non_missed, digits = digit_significance), group = best_order_NM), 
+#                      size=3, 
+#                      # show.legend = FALSE, 
+#                      colour = my_sig_palette[i],
+#                      position = position_dodge(width = 2),
+#                      vjust = -0.5)
+# }
+# p <- p + 
+#   ylab("Average non-missed disease gene rank") +
+#   xlab("Max. distance to primary reaction") +
+#   ggtitle("Av. gene rank for non-missed genes") + 
+#   geom_hline(yintercept=15, linetype="dashed", color = "salmon") +
+#   guides(shape = guide_legend(order = 1),
+#          colour = guide_legend(order = 2)) 
+# p <- pretty_plot(p, theme = "dark")
+# ggsave(paste0(outdir_name,"/",train_val,"_Ranks_Non_Missed_And_Missed",var_name,"_",sub_name,".png"), plot = p,
+#        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
 ##### all ranks, average rank and average standard deviation --------------
@@ -576,6 +576,22 @@ p <- ggplot(tmpDT, aes(x = Step)) +
                      labels = "Best ratios dis.genes\nin top 5",
                      values = 42) 
 for(i in c(1:5)){
+  p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05_training"]==i),],aes(x=Step, y=35, shape = "Best"), shape = "*", size=8)
+  p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05_training"]==i),],
+                     aes(x=Step, y=35, label = signif(Prior.frac05_training, digits = digit_significance), group = best_order_top05_training),
+                     size=3,
+                     # show.legend = FALSE,
+                     colour = "black",
+                     position = position_dodge(width = 2),
+                     vjust = -0.5)
+  p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05_validation"]==i),],aes(x=Step, y=35, shape = "Best"), shape = "*", size=8)
+  p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05_validation"]==i),],
+                     aes(x=Step, y=35, label = signif(Prior.frac05_validation, digits = digit_significance), group = best_order_top05_validation),
+                     size=3,
+                     # show.legend = FALSE,
+                     colour = "black",
+                     position = position_dodge(width = 2),
+                     vjust = -0.5)
   p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05"]==i),],aes(x=Step, y=35, shape = "Best"), shape = "*", size=8)
   p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top05"]==i),],
                      aes(x=Step, y=35, label = signif(Prior.frac05, digits = digit_significance), group = best_order_top05),
@@ -594,29 +610,48 @@ p <- p + guides(shape = guide_legend(override.aes = list(size = 5)),
                                                          size = c(0.5,2,2),
                                                          alpha = c(NA,1,1))))
 pp <- pretty_plot(p, secondary_y_axis = FALSE, theme = "dark")
-ggsave(paste0(outdir_name,"/",train_val,"_Average_Patient_And_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = pp,
+# ggsave(paste0(outdir_name,"/",train_val,"_Average_Patient_And_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = pp,
+#        width = 300, height = 200, dpi=resolution, units = "mm")
+ggsave(paste0(outdir_name,"/",train_val,"_test_",var_name,"_",sub_name,".png"), plot = pp,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 
-
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Special plots -----------------------------------------------------------
+# Special plots - Total Genes in MSEA_results per parameter ---------------
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-##### plot to show total number of genes with a metabolite set as function of the max_rxn and step
-
+##### as function of Max_rxn
 DT_gene <- tmpDT[, list(Step, Z_threshold, Max_rxn, PatientID, Total_genes, Seed)]
 
 tot_genes_per_maxrxn <- data.table()
 tot_genes_per_maxrxn[, c("Max_rxn", "Av", "Sd") := 
                        DT_gene[, list(mean(Total_genes), sd(Total_genes)), by = .(Max_rxn)]]
-test <- as.data.frame(tot_genes_per_maxrxn)
+tot_genes_per_maxrxn <- as.data.frame(tot_genes_per_maxrxn)
 
-ggplot(data = test, aes(x = Max_rxn, y = Av)) +
-  geom_line() 
+p1 <- ggplot(data = tot_genes_per_maxrxn, aes(x = Max_rxn, y = Av)) +
+  geom_line( aes(group = 1)) 
   # geom_errorbar(aes(ymax = Av + Sd, ymin = Av - Sd))
 
+##### as function of Step
+tot_genes_per_step <- data.table()
+tot_genes_per_step[, c("Step", "Av", "Sd") := 
+                       DT_gene[, list(mean(Total_genes), sd(Total_genes)), by = .(Step)]]
+tot_genes_per_step <- as.data.frame(tot_genes_per_step)
+p2 <- ggplot(data = tot_genes_per_step, aes(x = Step, y = Av)) +
+  geom_line( aes(group = 1)) 
 
+##### as function of Seed
+tot_genes_per_seed <- data.table()
+tot_genes_per_seed[, c("Seed", "Av", "Sd") := 
+                     DT_gene[, list(mean(Total_genes), sd(Total_genes)), by = .(Seed)]]
+tot_genes_per_seed <- as.data.frame(tot_genes_per_seed)
+p3 <- ggplot(data = tot_genes_per_seed, aes(x = as.factor(Seed), y = Av)) +
+  geom_bar( stat="identity") +
+  geom_errorbar(aes(ymax = Av + Sd, ymin = Av - Sd))
 
+library(gridExtra)
+p <- grid.arrange(p1, p2, p3, nrow = 2, layout_matrix = rbind(c(1, 2),c(3,3)))
+ggsave(paste0(outdir_name,"/",train_val,"_Total_genes_per_par_",var_name,"_",sub_name,".png"), plot = p,
+       width = 300, height = 200, dpi=resolution, units = "mm")
 
 
 
