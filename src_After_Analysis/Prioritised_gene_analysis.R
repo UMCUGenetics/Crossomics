@@ -44,6 +44,7 @@ names(Rxn_labs) <- c(8, 10, 12, 15, 17, 19)
 
 # Colour scheme 
 my_greens <- rev(brewer.pal(5, "Greens"))[c(2:5)]
+my_reds <- rev(brewer.pal(5, "Reds"))[c(2:5)]
 my_sig_palette <- rev(brewer.pal(6, "RdYlGn"))[2:6]
 
 # Image resolution
@@ -56,7 +57,7 @@ digit_significance <- 3
 # Exclude patients / diseases
 NoTrans <- FALSE
 subset_patients <- FALSE
-trainingset <- NULL # possible: TRUE, FALSE, NULL (for all data)
+trainingset <- "combined" # possible: TRUE, FALSE, NULL (for all data), "combined" (for all, but separated)
 
 # Date of data
 date <- "2019-09-11"
@@ -70,13 +71,30 @@ date <- "2019-09-11"
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 ##### Read data -----------------------------------------------------------
-if(is.null(trainingset)) {
-  train_val <- "all"
-} else {
-  train_val <- ifelse(trainingset, "trainingset", "validationset")
-}
 code_dir <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Results/")
-DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
+
+if(trainingset == "combined"){
+  train_val <- "trainingset"
+  DT1 <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
+  DT1[,Set := "training"]
+  train_val <- "validationset"
+  DT2 <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
+  DT2[,Set := "validation"]
+  DT <- rbind(DT1, DT2)
+  rm(DT1, DT2)
+} else {
+  if(is.null(trainingset)) {
+    train_val <- "all"
+    DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
+    DT[,Set := "all"]
+  } else {
+    train_val <- ifelse(trainingset, "trainingset", "validationset")
+    DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
+    ifelse(trainingset, DT[,Set := "training"], DT[,Set := "validation"])
+  }
+}
+
+# DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
 
 ##### Determine parameters ------------------------------------------------
 # temp$size_f = factor(temp$size, levels=c('50%','100%','150%','200%'))
@@ -164,7 +182,7 @@ DT_per_parameter <- NULL
 DT_tmp1 <- data.table()
 DT_tmp2 <- data.table()
 DT_tmp3 <- data.table()
-DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Prior.frac15","Prior.frac10","Prior.frac05","Prior.frac02","Prior.pos.frac.av.rev","Prior.pos.frac.av","Missed","Missed.frac",
+DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Set","Prior.frac15","Prior.frac10","Prior.frac05","Prior.frac02","Prior.pos.frac.av.rev","Prior.pos.frac.av","Missed","Missed.frac",
             "Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", "Prior.sd10", "Prior.sd05", "Prior.sd02","Prior.pos.frac.sd.rev","Prior.pos.frac.sd","Missed.sd") :=  
             # "Out_top50", "In_top50"
           tmpDT[, list(
@@ -187,10 +205,10 @@ DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Prior.frac15","Prior.frac10","Pri
             sd(Position==Total_genes) # Missed.sd
             # sum(!Prioritised50), # Out_top50
             # sum(Prioritised50) # In_top50
-          ), by = .(Step, Z_threshold, Max_rxn)]]
+          ), by = .(Step, Z_threshold, Max_rxn, Set)]]
 # DT_tmp2[, c("Step", "Z_threshold", "Max_rxn","Av_top50","Sd_top50") := tmpDT[Prioritised50 == TRUE, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
-DT_tmp3[, c("Step", "Z_threshold", "Max_rxn","Av_non_missed","Sd_non_missed") := tmpDT[P.value != 1, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
-DT_per_parameter <- merge(DT_tmp1, DT_tmp3, by = c("Step","Z_threshold", "Max_rxn"))
+DT_tmp3[, c("Step", "Z_threshold", "Max_rxn","Set","Av_non_missed","Sd_non_missed") := tmpDT[P.value != 1, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn, Set)]]
+DT_per_parameter <- merge(DT_tmp1, DT_tmp3, by = c("Step","Z_threshold", "Max_rxn","Set"))
 # DT_per_parameter <- merge(DT_per_parameter, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn"))
 rm(DT_tmp1,DT_tmp2,DT_tmp3)
 
@@ -239,9 +257,10 @@ patients <- as.vector(unique(tmpDT$PatientID))
 
 
 DT_per_patient <- data.table()
-DT_per_patient[, c("Step", "Z_threshold", "Max_rxn", "PatientID", "Av_rank", "Sd_rank", "Max_rank", "Min_rank","Missed", "Out_top50", "Av_Rev_Rel_rank", "Sd_Rev_Rel_rank",
+DT_per_patient[, c("Step", "Z_threshold", "Max_rxn", "PatientID", "Set", "Av_rank", "Sd_rank", "Max_rank", "Min_rank","Missed", "Out_top50", "Av_Rev_Rel_rank", "Sd_Rev_Rel_rank",
                    "Av_Rel_rank", "Sd_Rel_rank","Transporter", "P.value_check", "Max_tot_gen", "Min_tot_gen") := 
                  tmpDT[, list(
+                   unique(Set),
                    mean(Position), # Av_rank
                    sd(Position), # Sd_rank
                    max(Position), # Max_rank
@@ -275,12 +294,12 @@ DT_per_patient <- data.table(DT_per_patient)
 ##### Data table per parameter, missed genes 'removed'
 # DT_tmp1 <- copy(DT_per_patient)
 DT_tmp2 <- data.table()
-DT_tmp2[, c("Step", "Z_threshold", "Max_rxn", "Av_Rank_excl_miss", "Av_Sd_excl_miss") :=
+DT_tmp2[, c("Step", "Z_threshold", "Max_rxn", "Set","Av_Rank_excl_miss", "Av_Sd_excl_miss") :=
           DT_per_patient[, list(
             mean(Av_rank_excl_miss, na.rm=TRUE), # "Av_Rank"
             mean(Sd_rank_excl_miss, na.rm=TRUE) # "Av_Sd"
-          ), by = .(Step, Z_threshold, Max_rxn)]]
-DT_per_parameter <- merge(DT_per_parameter, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn"))
+          ), by = .(Step, Z_threshold, Max_rxn, Set)]]
+DT_per_parameter <- merge(DT_per_parameter, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn","Set"))
 DT_per_parameter <- data.table(DT_per_parameter)
 rm(DT_tmp2)
 
@@ -367,59 +386,111 @@ ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_Single_Par_Comb",var_
 # Combination plot of correctly prioritised and missed genes --------------
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+# p <- ggplot(DT_per_parameter, aes(x = Step)) +
+#   # geom_line(aes(y = Prior.frac15, colour = my_greens[4], group = 1)) +
+#   
+#   # Add shaded area for what is expected if the results were random:
+#   # geom_ribbon(aes(x= as.numeric(Step), ymin=1*15/Max_Tot.Genes, ymax=1*15/Min_Tot.Genes), colour = adjustcolor(my_greens[4],alpha.f=0.5), fill = my_greens[4], alpha="0.5") +
+#   # geom_ribbon(aes(x= as.numeric(Step), ymin=1*10/Max_Tot.Genes, ymax=1*10/Min_Tot.Genes), colour = adjustcolor(my_greens[3],alpha.f=0.5), fill = my_greens[3], alpha="0.5") +
+#   # geom_ribbon(aes(x= as.numeric(Step), ymin=1*5/Max_Tot.Genes, ymax=1*5/Min_Tot.Genes), colour = adjustcolor(my_greens[2],alpha.f=0.5), fill = my_greens[2], alpha="0.5") +
+#   # geom_ribbon(aes(x= as.numeric(Step), ymin=1*2/Max_Tot.Genes, ymax=1*2/Min_Tot.Genes), colour = adjustcolor(my_greens[1],alpha.f=0.6), fill = my_greens[1], alpha="0.6") +
+#   
+#   geom_line(aes(y = Prior.frac15, colour = "line15", group = 1)) +
+#   geom_point(aes(y = Prior.frac15, colour = "line15"), size=0.5) +
+#   geom_line(aes(y = Prior.frac10, colour = "line10", group = 1)) +
+#   geom_point(aes(y = Prior.frac10, colour = "line10"), size=0.5) +
+#   geom_line(aes(y = Prior.frac05, colour = "line05", group = 1)) +
+#   geom_point(aes(y = Prior.frac05, colour = "line05"), size=0.5) +
+#   geom_line(aes(y = Prior.frac02, colour = "line02", group = 1)) +
+#   geom_point(aes(y = Prior.frac02, colour = "line02"), size=0.5) +
+#   geom_line(aes(y = Missed.frac, colour = "missed", group = 1)) +
+#   geom_point(aes(y = Missed.frac, colour = "missed"), size=0.5) 
+# 
+# p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) 
+# p <- p + geom_point(data = DT_per_parameter[DT_per_parameter$best15 ==1, ], aes(x=Step, y=Prior.frac15, shape = "Best"), size=8) +
+#   scale_shape_manual(name = "",
+#                      labels = "Best param.\nperformance",
+#                      values = 42) +
+#   # geom_point(data = DT_per_parameter[DT_per_parameter$best15 ==1, ],aes(x=Step, y=Prior.frac15),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black") +
+#   geom_point(data = DT_per_parameter[DT_per_parameter$best10 ==1, ],aes(x=Step, y=Prior.frac10),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black") +
+#   geom_point(data = DT_per_parameter[DT_per_parameter$best05 ==1, ],aes(x=Step, y=Prior.frac05),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black") +
+#   geom_point(data = DT_per_parameter[DT_per_parameter$best02 ==1, ],aes(x=Step, y=Prior.frac02),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black")
+# 
+# p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best15==1, ],
+#                    aes(x=Step, y=Prior.frac15, label = signif(Prior.frac15, digits = digit_significance), group = best15),
+#                    size=3, colour = my_greens[4], position = position_dodge(width = 2), vjust = -0.5)
+# p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best10==1, ],
+#                    aes(x=Step, y=Prior.frac10, label = signif(Prior.frac10, digits = digit_significance), group = best10),
+#                    size=3, colour = my_greens[3], position = position_dodge(width = 2), vjust = -0.5)
+# p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best05==1, ],
+#                    aes(x=Step, y=Prior.frac05, label = signif(Prior.frac05, digits = digit_significance), group = best05),
+#                    size=3, colour = my_greens[2], position = position_dodge(width = 2), vjust = -0.5)
+# p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best02==1, ],
+#                    aes(x=Step, y=Prior.frac02, label = signif(Prior.frac02, digits = digit_significance), group = best02),
+#                    size=3, colour = my_greens[1], position = position_dodge(width = 2), vjust = -0.5)
+# p <- p + theme_dark() + 
+#   ylab("Disease genes / Total dis. genes") +
+#   xlab("Max distance to primary reaction") +
+#   ylim(0, 1) +
+#   ggtitle("Correct disease gene prioritisation") +
+#   scale_color_manual(name = "Prioritised Genes",
+#                      labels = c("In Top 2", "In Top 5", "In Top 10", "In Top 15", "Missed"),
+#                      values=c(my_greens,'RED'))
+# p <- pretty_plot(p, theme = "dark")
+# ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
+#        width = 300, height = 200, dpi=resolution, units = "mm")
+
+
+
 p <- ggplot(DT_per_parameter, aes(x = Step)) +
-  # geom_line(aes(y = Prior.frac15, colour = my_greens[4], group = 1)) +
-  
-  # Add shaded area for what is expected if the results were random:
-  # geom_ribbon(aes(x= as.numeric(Step), ymin=1*15/Max_Tot.Genes, ymax=1*15/Min_Tot.Genes), colour = adjustcolor(my_greens[4],alpha.f=0.5), fill = my_greens[4], alpha="0.5") +
-  # geom_ribbon(aes(x= as.numeric(Step), ymin=1*10/Max_Tot.Genes, ymax=1*10/Min_Tot.Genes), colour = adjustcolor(my_greens[3],alpha.f=0.5), fill = my_greens[3], alpha="0.5") +
-  # geom_ribbon(aes(x= as.numeric(Step), ymin=1*5/Max_Tot.Genes, ymax=1*5/Min_Tot.Genes), colour = adjustcolor(my_greens[2],alpha.f=0.5), fill = my_greens[2], alpha="0.5") +
-  # geom_ribbon(aes(x= as.numeric(Step), ymin=1*2/Max_Tot.Genes, ymax=1*2/Min_Tot.Genes), colour = adjustcolor(my_greens[1],alpha.f=0.6), fill = my_greens[1], alpha="0.6") +
-  
-  geom_line(aes(y = Prior.frac15, colour = "line15", group = 1)) +
-  geom_point(aes(y = Prior.frac15, colour = "line15"), size=0.5) +
-  geom_line(aes(y = Prior.frac10, colour = "line10", group = 1)) +
-  geom_point(aes(y = Prior.frac10, colour = "line10"), size=0.5) +
-  geom_line(aes(y = Prior.frac05, colour = "line05", group = 1)) +
-  geom_point(aes(y = Prior.frac05, colour = "line05"), size=0.5) +
-  geom_line(aes(y = Prior.frac02, colour = "line02", group = 1)) +
-  geom_point(aes(y = Prior.frac02, colour = "line02"), size=0.5) +
-  geom_line(aes(y = Missed.frac, colour = "missed", group = 1)) +
-  geom_point(aes(y = Missed.frac, colour = "missed"), size=0.5) 
-
-p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) +
-  geom_point(data = DT_per_parameter[DT_per_parameter$best15 ==1, ], aes(x=Step, y=Prior.frac15, shape = "Best"), size=8) + 
-  scale_shape_manual(name = "",
-                     labels = "Best param.\nperformance",
-                     values = 42) +
-  # geom_point(data = DT_per_parameter[DT_per_parameter$best15 ==1, ],aes(x=Step, y=Prior.frac15),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black") +
-  geom_point(data = DT_per_parameter[DT_per_parameter$best10 ==1, ],aes(x=Step, y=Prior.frac10),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black") +
-  geom_point(data = DT_per_parameter[DT_per_parameter$best05 ==1, ],aes(x=Step, y=Prior.frac05),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black") +
-  geom_point(data = DT_per_parameter[DT_per_parameter$best02 ==1, ],aes(x=Step, y=Prior.frac02),shape = "*", size=8, show.legend = FALSE, colour = "black", fill = "black")
-
-p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best15==1, ],
-                   aes(x=Step, y=Prior.frac15, label = signif(Prior.frac15, digits = digit_significance), group = best15),
-                   size=3, colour = my_greens[4], position = position_dodge(width = 2), vjust = -0.5)
-p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best10==1, ],
-                   aes(x=Step, y=Prior.frac10, label = signif(Prior.frac10, digits = digit_significance), group = best10),
-                   size=3, colour = my_greens[3], position = position_dodge(width = 2), vjust = -0.5)
-p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best05==1, ],
-                   aes(x=Step, y=Prior.frac05, label = signif(Prior.frac05, digits = digit_significance), group = best05),
-                   size=3, colour = my_greens[2], position = position_dodge(width = 2), vjust = -0.5)
-p <- p + geom_text(data = DT_per_parameter[DT_per_parameter$best02==1, ],
-                   aes(x=Step, y=Prior.frac02, label = signif(Prior.frac02, digits = digit_significance), group = best02),
-                   size=3, colour = my_greens[1], position = position_dodge(width = 2), vjust = -0.5)
+  geom_line(data = DT_per_parameter[Set == "training"], aes(y = Prior.frac05, colour = "line05t", group = 1)) +
+  geom_point(data = DT_per_parameter[Set == "training"], aes(y = Prior.frac05, colour = "line05t"), size=0.5) +
+  geom_line(data = DT_per_parameter[Set == "validation"], aes(y = Prior.frac05, colour = "line05v", group = 1)) +
+  geom_point(data = DT_per_parameter[Set == "validation"], aes(y = Prior.frac05, colour = "line05v"), size=0.5) +
+  geom_line(data = DT_per_parameter[Set == "training"], aes(y = Missed.frac, group = 1, linetype="Training"), colour = my_reds[1]) +
+  geom_point(data = DT_per_parameter[Set == "training"], aes(y = Missed.frac), size=0.5, colour = my_reds[1]) +
+  geom_line(data = DT_per_parameter[Set == "validation"], aes(y = Missed.frac, group = 1, linetype="Validation"), colour = my_reds[3]) +
+  geom_point(data = DT_per_parameter[Set == "validation"], aes(y = Missed.frac), size=0.5, colour = my_reds[3]) +
+  geom_hline(data = DT_per_parameter[Set == "training"], aes(yintercept = max(Prior.frac05)), colour = my_greens[1], alpha = 0.8, linetype = "dashed") +
+  geom_hline(data = DT_per_parameter[Set == "validation"], aes(yintercept = max(Prior.frac05)), colour = my_greens[3], alpha = 0.8, linetype = "dashed")
+p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) 
 p <- p + theme_dark() + 
   ylab("Disease genes / Total dis. genes") +
   xlab("Max distance to primary reaction") +
   ylim(0, 1) +
   ggtitle("Correct disease gene prioritisation") +
   scale_color_manual(name = "Prioritised Genes",
-                     labels = c("In Top 2", "In Top 5", "In Top 10", "In Top 15", "Missed"),
-                     values=c(my_greens,'RED'))
+                     labels = c("Training", "Validation"),
+                     values=c(my_greens[1], my_greens[3])) +
+  scale_linetype_manual(name = "Missed",
+                     labels = c("Training", "Validation"),
+                     values = c("solid", "solid"), 
+                     guide = guide_legend(override.aes = list(colour = c(my_reds[1], my_reds[3])))
+                     )
 p <- pretty_plot(p, theme = "dark")
 ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
+
+# Some example plot for making multiple legends out of 1 aesthetic
+# ggplot(data=dfr, mapping=aes(x=id, y=value)) +
+#   geom_line(mapping=aes(colour=group), show_guide=TRUE) +
+#   geom_hline(
+#     mapping=aes(yintercept=c(-1,1)*qnorm(0.95), fill="95% CI"),
+#     color="orange"
+#   ) +
+#   geom_hline(
+#     mapping=aes(yintercept=c(-1,1)*qnorm(0.99), fill="99% CI"),
+#     color="darkred"
+#   ) +
+#   scale_color_hue("Group", guide=guide_legend(order=1)) +
+#   scale_fill_manual("CI horizontal line", values=rep(1,4),
+#                     guide=guide_legend(
+#                       override.aes = list(colour=c("orange", "darkred")),
+#                       order=2
+#                     ),
+#                     labels=c("CI of 95%", "CI of 99%")
+#   )
+
 
 
 # # Average of top 50 genes -------------------------------------------------
