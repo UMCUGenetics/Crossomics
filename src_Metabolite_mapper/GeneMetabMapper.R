@@ -76,7 +76,7 @@ thresh_neg_list <- c(-1,-1.5,-3, -5)
 top <- 20
 id <- "hmdb"
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-09-11" # The date of this run 
+date_run <- "2019-09-24" # The date of this run 
 nr_mocks <- 100
 outdir <- "Results/"
 
@@ -85,9 +85,9 @@ outdir <- "Results/"
 bad_mets <- c("HMDB0002467")
 
 # train_data_name <- "Crossomics_DBS_Marten_Training.RData"
-train_data_name <- "Crossomics_DBS_Marten_Training_Validation.RData"
+train_data_name <- "Crossomics_DBS_Marten_Training_Validation_updated20190924.RData"
 
-redo <- "_REDO_" #(null or "_REDO_")
+redo <- "_REDO" #(null or "_REDO_")
 
 
 
@@ -152,8 +152,9 @@ load(paste0("Data/", train_data_name))
 mss <- read.table(paste0("./Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
 
 # correct naming of new training set to old format
-if(sum(colnames(xls_data) == "Patient number in set") > 0){
+if(sum(colnames(xls_data) == "Patient number in set" | colnames(xls_data) == "Patient.number.in.set") > 0){
   colnames(xls_data)[colnames(xls_data) == "Patient number in set"] <- "Patient.number"
+  colnames(xls_data)[colnames(xls_data) == "Patient.number.in.set"] <- "Patient.number"
 }
 
 
