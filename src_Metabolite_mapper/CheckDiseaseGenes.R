@@ -8,10 +8,10 @@ nr_mocks <- 100
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 
 # load(paste0("/Users/mkerkho7/DIMS2_repo/Crossomics/Data/Crossomics_DBS_Marten_Training_Validation.RData"))
-load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_Validation.RData"))
+load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_Validation_updated20190924.RData"))
 dis_genes <- unique(xls_data$Gene)
 dis_genes <- unique(trimws(unlist(strsplit(xls_data$Gene, split = "[;,]+"))))
-dis_genes[dis_genes == "MUT"] <- "MMUT" # Fix incorrect MUT name
+# dis_genes[dis_genes == "MUT"] <- "MMUT" # Fix incorrect MUT name
 
 
 for(i in 1:length(seeds)){
