@@ -19,6 +19,7 @@
 library(rstudioapi)
 library(data.table)
 library(xlsx)
+library(taRifx) # to remove factors
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -35,7 +36,8 @@ xls_df <- read.xlsx(paste0(path_of_xls,name_patient_data,".xlsx"), sheetIndex = 
 xls_df <- xls_df[,colSums(is.na(xls_df))<nrow(xls_df)]
 xls_DT <- data.table(xls_df)
 xls_data <- xls_DT
-save(file = paste0(path_of_xls,name_patient_data,".RData"), xls_data)
+xls_data <- taRifx::remove.factors(xls_data)
+save(file = paste0(path_of_xls,name_patient_data,"test.RData"), xls_data)
 
 
 ##### Check disease genes and print which ones don't have a metabolite set
