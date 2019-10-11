@@ -133,7 +133,7 @@ pretty_plot <- function(p, theme = "light", secondary_y_axis = TRUE){
   top_lab_width <- 5 + 2*length(Z_thresholds) - 2
   
   # label right strip
-  z <- gtable_add_cols(z, unit(z$widths[[7]], 'cm'), right_lab_loc)
+  z <- gtable_add_cols(z, unit(1, 'cm'), right_lab_loc)
   z <- gtable_add_grob(z, 
                        list(rectGrob(gp = gpar(col = NA, fill = ifelse(theme=="dark", "lightgray", gray(0.5)))),
                             textGrob("Extension stringency", rot = -90, gp = gpar(col = ifelse(theme=="dark", "black", "white")))),
@@ -141,16 +141,16 @@ pretty_plot <- function(p, theme = "light", secondary_y_axis = TRUE){
                        8, right_lab_loc+1, right_lab_bottom, right_lab_loc+1, name = paste(runif(2)))
   
   # label top strip
-  z <- gtable_add_rows(z, unit(z$heights[[3]], 'cm'), 3)
+  z <- gtable_add_rows(z, unit(1, 'cm'), 6)
   z <- gtable_add_grob(z, 
                        list(rectGrob(gp = gpar(col = NA, fill = ifelse(theme=="dark", "lightgray", gray(0.5)))),
                             textGrob("Biochemical stringency", gp = gpar(col = ifelse(theme=="dark", "black", "white")))),
                        # 4, 5, 4, 13, name = paste(runif(2)))
-                       4, 5, 4, top_lab_width, name = paste(runif(2)))
+                       7, 5, 7, top_lab_width, name = paste(runif(2)))
   
   # margins
-  z <- gtable_add_cols(z, unit(1/8, "line"), 7)
-  z <- gtable_add_rows(z, unit(1/8, "line"), 3)
+  # z <- gtable_add_cols(z, unit(1/8, "line"), 7)
+  # z <- gtable_add_rows(z, unit(1/8, "line"), 3)
   
   return(z)
 }
