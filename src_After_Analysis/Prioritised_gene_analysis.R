@@ -44,6 +44,8 @@ names(Rxn_labs) <- c(8, 10, 12, 15, 17, 19)
 
 # Colour scheme 
 my_greens <- rev(brewer.pal(5, "Greens"))[c(2:5)]
+my_blues <- rev(brewer.pal(5, "Blues"))[c(1:5)]
+my_greens <- my_blues
 my_reds <- rev(brewer.pal(5, "Reds"))[c(2:5)]
 my_sig_palette <- rev(brewer.pal(6, "RdYlGn"))[2:6]
 
@@ -450,25 +452,36 @@ p <- ggplot(DT_per_parameter, aes(x = Step)) +
   geom_line(data = DT_per_parameter[Set == "training"], aes(y = Missed.frac, group = 1, linetype="Training"), colour = my_reds[1]) +
   geom_point(data = DT_per_parameter[Set == "training"], aes(y = Missed.frac), size=0.5, colour = my_reds[1]) +
   geom_line(data = DT_per_parameter[Set == "validation"], aes(y = Missed.frac, group = 1, linetype="Validation"), colour = my_reds[3]) +
-  geom_point(data = DT_per_parameter[Set == "validation"], aes(y = Missed.frac), size=0.5, colour = my_reds[3]) +
-  geom_hline(data = DT_per_parameter[Set == "training"], aes(yintercept = max(Prior.frac05)), colour = my_greens[1], alpha = 0.8, linetype = "dashed") +
-  geom_hline(data = DT_per_parameter[Set == "validation"], aes(yintercept = max(Prior.frac05)), colour = my_greens[3], alpha = 0.8, linetype = "dashed")
+  geom_point(data = DT_per_parameter[Set == "validation"], aes(y = Missed.frac), size=0.5, colour = my_reds[3]) #+
+  # geom_hline(data = DT_per_parameter[Set == "training"], aes(yintercept = max(Prior.frac05), size = "Training", colour="line05t"), alpha = 0.8, linetype = "dashed") +
+  # geom_hline(data = DT_per_parameter[Set == "validation"], aes(yintercept = max(Prior.frac05), size = "Validation", colour="line05v"), alpha = 0.8, linetype = "dashed")
 p <- p + facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) 
-p <- p + theme_dark() + 
-  ylab("Disease genes / Total dis. genes") +
-  xlab("Max distance to primary reaction") +
+p <- p + theme_light() + 
+  ylab("Ratio [disease genes] / [total disease genes]") +
+  # ylab(expression(paste("Ratio of: ", frac(`disease genes`,`total disease genes`)))) +
+  xlab("Maximum distance to primary reaction") +
   ylim(0, 1) +
-  ggtitle("Correct disease gene prioritisation") +
-  scale_color_manual(name = "Prioritised Genes",
+  # ggtitle("Performance of disease gene prioritization") +
+  scale_color_manual(name = "Correctly prioritized genes",
                      labels = c("Training", "Validation"),
-                     values=c(my_greens[1], my_greens[3])) +
-  scale_linetype_manual(name = "Missed",
+                     values= c(my_greens[1], my_greens[3]),
+                     guide = guide_legend(override.aes = list(linetype = c("solid", "solid"),
+                                                              shape = c(16,16)), 
+                                          order = 1)
+  ) +
+  # scale_size_manual(name = "Max. fraction of\nprioritized genes",
+  #                   values= c(0.3, 0.3),
+  #                   guide = guide_legend(override.aes = list(linetype = c("dashed","dashed"),
+  #                                                            shape = c(NA,NA),
+  #                                                            colour = c(my_greens[1], my_greens[3])))) +
+  scale_linetype_manual(name = "Missed genes",
                      labels = c("Training", "Validation"),
                      values = c("solid", "solid"), 
-                     guide = guide_legend(override.aes = list(colour = c(my_reds[1], my_reds[3])))
+                     guide = guide_legend(override.aes = list(colour = c(my_reds[1], my_reds[3])), 
+                                          order = 2)
                      )
-p <- pretty_plot(p, theme = "dark")
-ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = p,
+pp <- pretty_plot(p, theme = "light")
+ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = pp,
        width = 300, height = 200, dpi=resolution, units = "mm")
 
 # Some example plot for making multiple legends out of 1 aesthetic
@@ -723,6 +736,73 @@ library(gridExtra)
 p <- grid.arrange(p1, p2, p3, nrow = 2, layout_matrix = rbind(c(1, 2),c(3,3)))
 ggsave(paste0(outdir_name,"/",train_val,"_Total_genes_per_par_",var_name,"_",sub_name,".png"), plot = p,
        width = 300, height = 200, dpi=resolution, units = "mm")
+
+
+
+##### average standard deviation ------------------------------
+# p <- ggplot(tmpDT[Missed == FALSE], aes(x = Step)) +
+p <- ggplot(tmpDT, aes(x = Step)) +
+  # geom_point(aes(y = Position), position=position_dodge(width = 5.5)) +
+  # geom_jitter(data = tmpDT[Missed == FALSE], aes(x = Step, y = Position, colour = Set), size = 0.005, alpha = 0.2) +
+  # geom_jitter(aes(y = Position, colour = Missed), size = 0.005, alpha = 0.2) +
+  # geom_jitter(aes(y = Position, colour = "Per-patient rank"), size = 0.005) +
+  # geom_jitter(data =DT_test[Missed == TRUE], aes(x = Step, y = Position, fill = "Missed genes"), colour = "blue", size = 0.005, alpha = 0.2) +
+  geom_line(data = DT_per_parameter, aes(x = Step, y = Av_non_missed, colour = Set, linetype = Set, group = Set)) +
+  geom_errorbar(data = DT_per_parameter, aes(x = Step, 
+                                             ymax = Av_non_missed + Av_Sd_excl_miss, 
+                                             ymin = Av_non_missed - Av_Sd_excl_miss,
+                                             colour = Set), 
+                width = 0.5) +
+  geom_hline(aes(yintercept = 5), colour = "darksalmon", linetype="dashed") +
+  facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) +
+  theme_dark() + 
+  ylab("Disease gene rank") +
+  xlab("Max distance to primary reaction") +
+  ggtitle("Gene prioritization performance") +
+  # geom_point(data = DT_per_parameter[DT_per_parameter$best_order_top05 ==1, ], aes(x=Step, y=35, shape = "Best"), size=8) + 
+  scale_shape_manual(name = "",
+                     labels = "Best ratios dis.genes\nin top 5",
+                     values = 42) 
+p <- p + scale_color_manual(name = "Gene ranks",
+                            labels = c("Training", "Validation"),
+                            values = alpha(c("black","red"), 0.5))
+p <- p + scale_linetype_manual(name = "Gene ranks",
+                               labels = c("Training", "Validation"),
+                               values = c("solid", "solid"), 
+                               guide = guide_legend(override.aes = list(colour = alpha(c("black", "red"), 0.5)))
+)
+pp <- pretty_plot(p, secondary_y_axis = FALSE, theme = "dark")
+# ggsave(paste0(outdir_name,"/",train_val,"_Average_Patient_And_Ranks_And_Missed_",var_name,"_",sub_name,".png"), plot = pp,
+#        width = 300, height = 200, dpi=resolution, units = "mm")
+ggsave(paste0(outdir_name,"/",train_val,"_test_",var_name,"_",sub_name,".png"), plot = pp,
+       width = 300, height = 200, dpi=resolution, units = "mm")
+
+
+##### standard deviation of a single panel ------------------------------
+# Single panel from big facet plot (top 2, 5, 10 and 15)
+p <- ggplot(DT_per_parameter[Z_threshold == "-3, 3" & Max_rxn == 10], aes(x = Step, y = Av_non_missed)) +
+  # geom_line(aes(colour = Set, linetype = Set, group = Set)) +
+  geom_point(aes(colour = Set, group = Set), position = position_dodge(width = 0.3)) +
+  geom_errorbar(aes(ymax = Av_non_missed + Av_Sd_excl_miss, 
+                    ymin = Av_non_missed - Av_Sd_excl_miss,
+                    colour = Set), 
+                width = 0.2, position = position_dodge(width = 0.3)) +
+  geom_hline(aes(yintercept = 5), colour = "darksalmon", linetype="dashed") 
+p <- p + theme_light() + 
+  ylab("Average disease gene rank") +
+  xlab("Maximum distance to primary reaction") 
+  # ggtitle("Average rank and standard deviation (non missed genes)")
+p <- p + scale_color_manual(name = "Gene ranks",
+                            labels = c("Training", "Validation"),
+                            values = c("red","blue"))
+# p <- p + scale_linetype_manual(name = "Gene ranks",
+#                                labels = c("Training", "Validation"),
+#                                values = c("solid", "solid"), 
+#                                guide = guide_legend(override.aes = list(colour = alpha(c("black", "red"), 0.3))))
+ggsave(paste0(outdir_name,"/",train_val,"_Singlepanel_Av_Std",var_name,"_",sub_name,".png"), plot = p,
+       width = 200, height = 130, dpi=resolution, units = "mm")
+
+
 
 
 
