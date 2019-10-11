@@ -44,9 +44,9 @@ seeds <- c(8372, 2528, 6140, 3880, 2771,
            8455, 3200, 6250, 4860, 6297, 
            244, 3764, 2464, 3218, 2282, 
            5600, 2359, 8353, 6399, 2001)
-patient_info_file <- "Crossomics_DBS_Marten_Training_Validation.RData"
+patient_info_file <- "Crossomics_DBS_Marten_Training_Validation_updated20190924.RData"
 patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
-trainingset <- NULL # possible: TRUE, FALSE, NULL (for all data)
+trainingset <- FALSE # possible: TRUE, FALSE, NULL (for all data)
 
 
 
@@ -55,7 +55,7 @@ trainingset <- NULL # possible: TRUE, FALSE, NULL (for all data)
 # Prepare data ------------------------------------------------------------
 ###########################################################################
 
-# Check if there are any patients that have re-analysed
+# Check if there are any patients that have been re-analysed
 redo_index <- grep("REDO", list.files(paste0(code_dir,"/../Results/",date)))
 if(length(redo_index) > 0){
   patients_redone <- NULL
