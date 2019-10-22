@@ -1,13 +1,13 @@
 library(rstudioapi)
 
-seeds <- c(8372, 2528, 6140, 3880, 2771, 
-           8455, 3200, 6250, 4860, 6297, 
-           244, 3764, 2464, 3218, 2282, 
-           5600, 2359, 8353, 6399, 2001)
-nr_mocks <- 100
+seeds <- sample(1:100000, 1000, replace = FALSE)
+nr_mocks <- 200
 
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-path <- paste0(code_dir,"/../Results/")
+today <- Sys.Date()
+path <- paste0(code_dir,"/../Results/Mock_genes/",today)
+dir.create(path, recursive = TRUE)
+
 
 # Load dataset containing patients with their disease genes (dataset is called xls_data and is a data.table)
 load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.RData"))
@@ -34,7 +34,7 @@ mock_genes <- mock_genes[!mock_genes %in% dis_genes]
 
 for (seed in seeds){
   set.seed(seed = seed)
-  genes <- sample(mock_genes, size = nr_mocks)
+  genes <- sample(mock_genes, size = nr_mocks, replace = FALSE)
   
   write.table(genes, file = paste0(path, "/mock_genes",nr_mocks,"_seed",seed,".txt"), row.names = FALSE, col.names = FALSE)
 }
