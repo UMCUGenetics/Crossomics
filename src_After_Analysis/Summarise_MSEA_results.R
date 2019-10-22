@@ -27,6 +27,7 @@ library("Matrix.utils")
 library("data.table")
 library("stringr") # for patient digit fixing
 
+
 # library("XLConnect") # Only for older results. Switched to .RData files
 # library("xlsx")
 
@@ -77,6 +78,14 @@ if("Patient.number.in.set" %in% colnames(xls_data)){
   stop("column names of xls_data do not follow a known pattern")
 }
 
+xls_data[, "Patient" := tstrsplit(Patient, "[P.]")[2]]
+xls_data[, "Patient" := paste0("P",str_pad(Patient, width = 3, pad = "0", side = "left"))]
+xls_data[, Gene := str_replace_all(Gene, " ", "")]
+xls_data[, PatientID := do.call(paste, c(.SD, sep = ":")), .SDcols= c("Patient", "Dataset")]
+xls_data[, "DBS" := .N, by = PatientID]
+
+
+
 # columns to paste together
 # cols <- c( 'Dataset' , 'Patient' )
 
@@ -84,7 +93,7 @@ if("Patient.number.in.set" %in% colnames(xls_data)){
 xls_unique <- xls_data[!duplicated(apply( xls_data[ , c( 'Dataset' , 'Patient' ) ] , 1 , paste , collapse = "_" )),]
 
 # Fix numbering of patients to contain 3 digits
-xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_pad(unlist(strsplit(x, split = "P"))[2], 3, side = "left", pad = "0")))]
+# xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_pad(unlist(strsplit(x, split = "P"))[2], 3, side = "left", pad = "0")))]
 
 # fixed_patients <- unlist(lapply(strsplit(xls_unique$Patient[nchar(xls_unique$Patient) <= 3], split = ""), function(x) paste0(x[1],"0",x[2])))
 # xls_unique$Patient[nchar(xls_unique$Patient) == 2] <- fixed_patients
@@ -93,8 +102,8 @@ xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_p
 xls_unique <- xls_unique[Gene != "NA" & (is.na(xls_unique[,`Judith.`]) | `Judith.` == "Inclusion"),]
 
 # select test set or validation set & only non-exlusion patients
-which_set <- ifelse(trainingset == TRUE, "Training set", "Validation set")
-if(class(which_set) == "character") xls_unique <- xls_unique[`Type.set` == which_set ,]
+# which_set <- ifelse(trainingset == TRUE, "Training set", "Validation set")
+# if(class(which_set) == "character") xls_unique <- xls_unique[`Type.set` == which_set ,]
 
 xls_unique <- as.data.table(xls_unique)
 
@@ -106,6 +115,7 @@ DT <- NULL
 
 for (i in 1:nrow(xls_unique)){
   patient <- unlist(xls_unique[i, Patient])
+  DBS <- unlist(xls_unique[i, DBS])
   prot_func <- xls_unique$Gene.product.function[i]
   if(is.null(prot_func)) prot_func <- NA
   if (length(patients_not_done) > 0){
@@ -153,6 +163,7 @@ for (i in 1:nrow(xls_unique)){
           if(any(dis_gene %in% MSEA_results$metabolite.set)){
             # dis_pos <- min(unlist(lapply(dis_gene, function(x) grep(x, MSEA_results$metabolite.set))))
             dis_pos <- min(unlist(lapply(dis_gene, function(x) grep(paste0("\\b",x,"\\b"), MSEA_results$metabolite.set))))
+            set_size <- MSEA_results[dis_pos, 'mets.in.set']
             
             p.value <- MSEA_results$p.value[dis_pos]
             if(p.value==1){
@@ -164,13 +175,16 @@ for (i in 1:nrow(xls_unique)){
             # dis_pos <- nrow(MSEA_results)
             rank <- nrow(MSEA_results)
             p.value <- 1
+            set_size <- 0
           }
           # dis_pos <- grep(dis_gene, MSEA_results$metabolite.set)
           
           gene_set <- nrow(MSEA_results)
           
           patient_DT <- data.table(Patient = patient,
+                                   DBS = DBS,
                                    Gene = paste(dis_gene,collapse = ";"),
+                                   Gene_met_set_size = set_size,
                                    Protein_function = prot_func,
                                    Transporter = is_trans,
                                    Position = rank,
@@ -203,10 +217,10 @@ DT[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
 DT[, Step:=factor(Step, levels = steps)]
 DT[, Protein_function:=as.factor(Protein_function)]
 
-if(is.null(trainingset)){
+# if(is.null(trainingset)){
   saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_all.RDS"))
-} else if(trainingset){
-  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_trainingset.RDS"))
-} else {
-  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_validationset.RDS"))
-}
+# } else if(trainingset){
+#   saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_trainingset.RDS"))
+# } else {
+#   saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_validationset.RDS"))
+# }
