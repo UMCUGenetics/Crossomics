@@ -41,13 +41,17 @@ Z_thresholds <- c("-1, 1.5", "-1.5, 2", "-3, 3", "-5, 5")
 max_rxns <- c(8, 10, 12, 15, 17, 19)
 steps <- c(0,1,2,3,4,5)
 date <- "2019-09-11"
+seed_date <- "2019-10-22"
+# seeds <- sub(x = list.files(path = paste0(code_dir, "/../Results/Mock_genes/",seed_date,"/")), 
+#              pattern = ".*seed([^seed]*?)\\.txt", 
+#              replacement = "\\1")
 seeds <- c(8372, 2528, 6140, 3880, 2771, 
            8455, 3200, 6250, 4860, 6297, 
            244, 3764, 2464, 3218, 2282, 
            5600, 2359, 8353, 6399, 2001)
 patient_info_file <- "Crossomics_DBS_Marten_Training_Validation_updated20190924.RData"
 patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
-trainingset <- FALSE # possible: TRUE, FALSE, NULL (for all data)
+trainingset <- NULL # possible: TRUE, FALSE, NULL (for all data)
 
 
 
