@@ -140,16 +140,18 @@ paste.unique <- function(colname){
 # Load data ---------------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-setwd(paste0(code_dir,"/../"))
+# setwd(paste0(code_dir,"/../"))
 
 source(paste0(code_dir,"/Supportive/sourceDir.R"))
 sourceDir(paste0(code_dir,"/Supportive"), trace = FALSE)
 
 
-load(paste0("Data/", train_data_name))
+# load(paste0("Data/", train_data_name))
+load(paste0(code_dir,"/../Data/", train_data_name))
 
 # Load mock gene set
-mss <- read.table(paste0("./Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+# mss <- read.table(paste0("./Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+mss <- read.table(paste0(code_dir,"../Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
 
 # correct naming of new training set to old format
 if(sum(colnames(xls_data) == "Patient number in set" | colnames(xls_data) == "Patient.number.in.set") > 0){
@@ -163,7 +165,8 @@ if (!Subset_Of_Patients){
   dat_pat <- paste(xls_data$Dataset, xls_data$Patient.number, sep = "^")
   uni_dat_pat <- unique(sapply(strsplit(dat_pat, split = "\\."), `[`, 1))
 } else {
-  uni_dat_pat <- read.table(paste0("./Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+  # uni_dat_pat <- read.table(paste0("./Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+  uni_dat_pat <- read.table(paste0(code_dir,"../Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
 }
 
 
@@ -177,7 +180,8 @@ if (!Subset_Of_Patients){
 # }
 
 # Set which metabolites to remove
-mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
+# mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
+mets2remove <- as.data.frame(readRDS(paste0(code_dir,"../Data/mets2remove.RDS")))
 
 
 
@@ -226,7 +230,8 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
   # Make dataset location mac-compatible
   # data_location <- gsub("Y:", "/Volumes/Metab", data_location)
   # data_location <- gsub("\\", "/", data_location, fixed = TRUE)
-  data_location <- paste("Data", paste(strsplit(data_location, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")
+  # data_location <- paste("Data", paste(strsplit(data_location, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")
+  data_location <- paste(code_dir,"../Data", paste(strsplit(data_location, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")
   
 
   
@@ -306,9 +311,11 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
       overview <- NULL # at the end
       
       if (date_input >= "2019-08-12"){
-        indir <- paste0("Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+        # indir <- paste0("Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+        indir <- paste0(code_dir,"../Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
       } else {
-        indir <- paste0("Data/",date_input,"_maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+        # indir <- paste0("Data/",date_input,"_maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+        indir <- paste0(code_dir,"../Data/",date_input,"_maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
       }
       
       # patient_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed)
@@ -329,7 +336,7 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
       # step_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
       step_folder <- paste0(date_run,"/", patient, redo,"_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
       
-      dir.create(paste0(outdir,step_folder), recursive = TRUE, showWarnings = FALSE)
+      dir.create(paste0(code_dir,"../",outdir,step_folder), recursive = TRUE, showWarnings = FALSE)
       
       metSetResult = NULL
       nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
@@ -419,7 +426,7 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
                              gene_in, 
                              thresh_F_pos, 
                              thresh_F_neg, 
-                             path = outdir, 
+                             path = paste0(code_dir,"../", outdir), 
                              top, 
                              id, 
                              patient_folder = step_folder,
@@ -447,7 +454,8 @@ mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
       # genExcelFileShort(list = as.data.frame(metSetResult[order(as.numeric(metSetResult[,"p.value"])),]), 
       #                   wbfile = paste0(outdir,"/", step_folder,"/MSEA_results.xls"))
       metSetResult <- metSetResult[order(as.numeric(metSetResult[,"p.value"])),]
-      save(metSetResult, file = paste0(outdir, step_folder,"/MSEA_results.RData"))
+      # save(metSetResult, file = paste0(outdir, step_folder,"/MSEA_results.RData"))
+      save(metSetResult, file = paste0(code_dir,"../", outdir, step_folder,"/MSEA_results.RData"))
       
       cat("\n\n")
     # }
