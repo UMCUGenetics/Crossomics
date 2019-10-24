@@ -1,4 +1,4 @@
-performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene_in, thresh_F_pos, thresh_F_neg, path, top = 20, id="hmdb", patient_folder, plot = TRUE){
+performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene_in, thresh_F_pos, thresh_F_neg, path = NULL, top = 20, id="hmdb", patient_folder, plot = TRUE){
 
     # set the dimensions of the pictures for later
   width=1024
@@ -191,7 +191,7 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   ints=ints[order(ints[,"Z.score"]),]
   
   # if(nrow(ints) > 0) genExcelFileShort(as.data.frame(ints), paste(path, "/", patient_folder, "/", gene_in,".xls",sep=""))
-  if(nrow(ints) > 0) save(ints, file = paste0(path, patient_folder, "/", gene_in,".RData"))
+  # if(nrow(ints) > 0) save(ints, file = paste0(path, patient_folder, "/", gene_in,".RData"))
   
   
   return(list("p.value"=p,"mets_exc_thres"=InSetExceedingThresh))
