@@ -22,27 +22,45 @@
 # This part ensures a correct loading of libraries on my (Marten) HPC environment with my R version (3.6.0). If someone else wants to run this, 
 # he/she should point to a location on the HPC with the correct libraries.
 if(Sys.getenv("RSTUDIO") != "1") {
-  R_location <- "/hpc/local/CentOS7/dbg_mz/R_libs/3.6.0/lib64" 
+  cmd_args <- commandArgs(trailingOnly = TRUE)
+  patient_number <- as.numeric(cmd_args[1])
+  thresholds <- cmd_args[2]
+  max_rxns <- cmd_args[3]
+  max_rxns <- as.numeric(unlist(strsplit(max_rxns, split = ",")))
+  steps <- cmd_args[4]
+  steps <- as.numeric(unlist(strsplit(steps, split = ",")))
+  code_dir <- cmd_args[5]
+  seed_file <- cmd_args[6]
+  seed <- as.integer(sub(".txt", "", sub(".*seed", "", seed_file)))
+  R_location <- cmd_args[7]
+  R_location <- sub("/bin", "/lib64", R_location)
+  
+  outdir <- "Results"
+  
+  # R_location <- "/hpc/local/CentOS7/dbg_mz/R_libs/3.6.0/lib64" 
   
   suppressMessages(library("stringr",lib.loc = R_location)) # string manipulation, add leading 0's
-  suppressMessages(library("Cairo",lib.loc = R_location))
+  # suppressMessages(library("Cairo",lib.loc = R_location))
   suppressMessages(library("backports",lib.loc = R_location))
   suppressMessages(library("crayon",lib.loc = R_location))
   suppressMessages(library("vctrs",lib.loc = R_location))
   suppressMessages(library("tidyselect",lib.loc = R_location))
   suppressMessages(library("tidyr",lib.loc = R_location))
-  # suppressMessages(library("heatmap3",lib.loc = R_location))
   suppressMessages(library("data.table",lib.loc = R_location))
   suppressMessages(library("dplyr",lib.loc = R_location))
   
-  # Supply the maxrxn and the directory where this script is placed
-  cmd_args <- commandArgs(trailingOnly = TRUE)
-  threshold <- as.numeric(cmd_args[1])
-  maxrxn <- as.numeric(cmd_args[2])
-  step <- as.numeric(cmd_args[3])
-  patient_number <- as.numeric(cmd_args[4])
-  code_dir <- cmd_args[5]
-  seed <- cmd_args[6]
+  # # Supply the maxrxn and the directory where this script is placed
+  # cmd_args <- commandArgs(trailingOnly = TRUE)
+  # # threshold <- as.numeric(cmd_args[1])
+  # # maxrxn <- as.numeric(cmd_args[2])
+  # # step <- as.numeric(cmd_args[3])
+  # # patient_number <- as.numeric(cmd_args[4])
+  # # code_dir <- cmd_args[5]
+  # # seed <- cmd_args[6]
+  # patient_number <- as.numeric(cmd_args[1])
+  # code_dir <- cmd_args[2]
+  # seed_file <- cmd_args[3]
+  # seed <- as.integer(sub(".txt", "", sub(".*seed", "", seed_file)))
 } else {
   library("stringr") # string manipulation, add leading 0's
   library("Cairo")
@@ -50,12 +68,12 @@ if(Sys.getenv("RSTUDIO") != "1") {
   library("tidyr")
   # library("heatmap3")
   library("data.table")
-  threshold <- 5 # possible 1, 2, 3, 4, 5
-  maxrxn <- 19 # possible: 8, 10, 12, 15, 17, 19
-  step <- 5 # possible 1, 2, 3, 4, 5
-  patient_number <- 3 # possible 1:51
+  thresholds <- c(1,2,3,4) # possible 1, 2, 3, 4, 5
+  max_rxns <- c(8,10,12,15,17,19) # possible: 8, 10, 12, 15, 17, 19
+  steps <- c(0,1,2,3,4,5) # possible 1, 2, 3, 4, 5
+  patient_number <- 1 # possible 1:51
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  seed <- 244
+  seed <- 232
 }
 
 
@@ -63,10 +81,19 @@ if(Sys.getenv("RSTUDIO") != "1") {
 # Other variables ---------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+# thresholds <- c(1,2,3,4,5,6) 
+# max_rxns <- c(8,10,12,15,17,19) 
+# steps <- c(0,1,2,3,4,5) 
+
 Subset_Of_Patients <- FALSE
 
-thresh_pos_list <- c(1.5,2,3, 5)
-thresh_neg_list <- c(-1,-1.5,-3, -5)
+thresh_df <- sapply(strsplit(unlist(strsplit(thresholds, split = ",")), ";"), `[`)
+
+thresh_neg_list <- as.numeric(thresh_df[1,])
+thresh_pos_list <- as.numeric(thresh_df[2,])
+
+# thresh_pos_list <- c(1.5, 2, 3, 5, 1.5, 2)
+# thresh_neg_list <- c(-1, -1.5, -3, -5, -1.5, -2)
 
 # if(Subset_Of_Patients){
 #   sample_number <- 4
@@ -76,8 +103,8 @@ thresh_neg_list <- c(-1,-1.5,-3, -5)
 top <- 20
 id <- "hmdb"
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-09-24" # The date of this run 
-nr_mocks <- 100
+date_run <- "2019-10-25" # The date of this run 
+nr_mocks <- 200
 outdir <- "Results/"
 
 # Remove any metabolites that (for some reason) should not be present
@@ -87,7 +114,7 @@ bad_mets <- c("HMDB0002467")
 # train_data_name <- "Crossomics_DBS_Marten_Training.RData"
 train_data_name <- "Crossomics_DBS_Marten_Training_Validation_updated20190924.RData"
 
-redo <- "_REDO" #(null or "_REDO_")
+redo <- NULL #(null or "_REDO")
 
 
 
@@ -151,22 +178,30 @@ load(paste0(code_dir,"/../Data/", train_data_name))
 
 # Load mock gene set
 # mss <- read.table(paste0("./Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
-mss <- read.table(paste0(code_dir,"../Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+mss <- read.table(paste0(code_dir,"/../Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+# mss <- read.table(paste0(code_dir,"/../Results/Mock_genes/2019-10-22/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
 
 # correct naming of new training set to old format
 if(sum(colnames(xls_data) == "Patient number in set" | colnames(xls_data) == "Patient.number.in.set") > 0){
-  colnames(xls_data)[colnames(xls_data) == "Patient number in set"] <- "Patient.number"
-  colnames(xls_data)[colnames(xls_data) == "Patient.number.in.set"] <- "Patient.number"
+  colnames(xls_data)[colnames(xls_data) == "Patient number in set"] <- "Old.patient.number"
+  colnames(xls_data)[colnames(xls_data) == "Patient.number.in.set"] <- "Old.patient.number"
 }
+
+xls_data$Patient.number <- sapply(strsplit(xls_data$Old.patient.number,"[P.]"), function(x)
+  paste0("P", sprintf("%03d",as.numeric(x[2])), ".", x[3])
+)
 
 
 # Load patient subset
 if (!Subset_Of_Patients){
   dat_pat <- paste(xls_data$Dataset, xls_data$Patient.number, sep = "^")
+  xls_data$PatientIDs <- paste(xls_data$Dataset, xls_data$Patient.number, sep = "^")
+  patientIDs <- sapply(strsplit(dat_pat, split = "\\."), `[`, 1)
+  DT_patientIDs <- as.data.table(table(patientIDs))
   uni_dat_pat <- unique(sapply(strsplit(dat_pat, split = "\\."), `[`, 1))
 } else {
   # uni_dat_pat <- read.table(paste0("./Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
-  uni_dat_pat <- read.table(paste0(code_dir,"../Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+  uni_dat_pat <- read.table(paste0(code_dir,"/../Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
 }
 
 
@@ -181,7 +216,7 @@ if (!Subset_Of_Patients){
 
 # Set which metabolites to remove
 # mets2remove <- as.data.frame(readRDS("Data/mets2remove.RDS"))
-mets2remove <- as.data.frame(readRDS(paste0(code_dir,"../Data/mets2remove.RDS")))
+mets2remove <- as.data.frame(readRDS(paste0(code_dir,"/../Data/mets2remove.RDS")))
 
 
 
@@ -240,11 +275,13 @@ mets2remove <- as.data.frame(readRDS(paste0(code_dir,"../Data/mets2remove.RDS"))
   # Calculate Z scores ------------------------------------------------------
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   
-  if(nchar(patient) <= 3) {
-    tmp_patient <- unlist(strsplit(patient, split = "P"))[2]
-    tmp_patient <- str_pad(tmp_patient, 3, pad = "0")
-    patient <- paste0("P",tmp_patient)
-  }
+  # if(nchar(patient) <= 3) {
+  #   tmp_patient <- unlist(strsplit(patient, split = "P"))[2]
+  #   tmp_patient <- str_pad(tmp_patient, 3, pad = "0")
+  #   patient <- paste0("P",tmp_patient)
+  # }
+  
+  old_patient_number <- sub(xls_data[grep(i, xls_data$PatientIDs, fixed = TRUE)[1], Old.patient.number], pattern = "\\..*", replacement = "")
   
   Zint_values <- generate_av_Z_scores(patient = patient, data_location = data_location)
   rownames(Zint_values)[nchar(rownames(Zint_values)) == 9] <- str_replace(rownames(Zint_values)[nchar(rownames(Zint_values)) == 9], pattern = "HMDB", replacement = "HMDB00")
@@ -300,164 +337,203 @@ mets2remove <- as.data.frame(readRDS(paste0(code_dir,"../Data/mets2remove.RDS"))
   
   # Any file location is fine in this format as all variable combinations have the same file(names) in them
   # mss <- list.files("Data/2019-07-19_maxrxn8/mss_0_HMDBtranslated")
+  # Load in gene file names
+  mss <- c(mss, dis_gene)
+  # Check if mss files are saved as RData or RDS:
+  tmp_dir <- paste0(code_dir,"/../Data/",date_input,"/maxrxn",max_rxns[1],"/mss_", steps[1],"_HMDBtranslated")
+  if (unlist(strsplit(list.files(tmp_dir)[1], split = "\\."))[2] == "RData"){
+    save_as <- "RData"
+    mss <- paste0(mss,".RData")
+  } else if (unlist(strsplit(list.files(tmp_dir)[1], split = "\\."))[2] == "RDS"){
+    save_as <- "RDS"
+    mss <- paste0(mss,".RDS")
+  }
+  rm(tmp_dir)
+  Patient_metSetResult <- data.table()
   
-  # for (threshold in 1:length(thresh_pos_list)){
+  for (threshold in 1:length(thresh_pos_list)){
+  # for (threshold in 1:2){
     thresh_F_pos <- thresh_pos_list[threshold]
     thresh_F_neg <- thresh_neg_list[threshold]
     cat("Z-value threshold:", thresh_F_neg,"/", thresh_F_pos, "\n")
+    threshs <- paste(c(thresh_F_pos,thresh_F_neg), collapse = ", ")
     
-    # for (step in steps){
+    for (step in steps){
+    # for (step in c(steps[4],steps[5])){
       cat("step:", step, "\n")
       overview <- NULL # at the end
       
-      if (date_input >= "2019-08-12"){
-        # indir <- paste0("Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
-        indir <- paste0(code_dir,"../Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
-      } else {
-        # indir <- paste0("Data/",date_input,"_maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
-        indir <- paste0(code_dir,"../Data/",date_input,"_maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
-      }
+      for (maxrxn in max_rxns){
+      # for (maxrxn in c(max_rxns[5],max_rxns[6])){
+        cat("Max rxn:", maxrxn, "\n")
       
-      # patient_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed)
-      
-      # Load in gene file names
-      mss <- c(mss, dis_gene)
-      if (unlist(strsplit(list.files(indir)[1], split = "\\."))[2] == "RData"){
-        save_as <- "RData"
-        mss <- paste0(mss,".RData")
-      } else if (unlist(strsplit(list.files(indir)[1], split = "\\."))[2] == "RDS"){
-        save_as <- "RDS"
-        mss <- paste0(mss,".RDS")
-      }
-      
-      
-      
-      # step_folder <- paste0(patient_folder,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
-      # step_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
-      step_folder <- paste0(date_run,"/", patient, redo,"_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
-      
-      dir.create(paste0(code_dir,"../",outdir,step_folder), recursive = TRUE, showWarnings = FALSE)
-      
-      metSetResult = NULL
-      nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
-      
-      # for (j in 1:length(mss)){
-        for (j in 1:length(mss)){
-        # if(j%%5 == 0) cat(paste0(j, "%... "))
-        if(j%%33 == 0) cat("gene:", mss[j], "number:", j,"\n")
-        # Skip the gene if there is no metabolite pathway xls_data available, elsewise, load its file
-        if (!file.exists(paste(indir, mss[j], sep="/"))) next
+        if (date_input >= "2019-08-12"){
+          # indir <- paste0("Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+          indir <- paste0(code_dir,"/../Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+        } else {
+          # indir <- paste0("Data/",date_input,"_maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+          indir <- paste0(code_dir,"/../Data/",date_input,"_maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
+        }
         
-          # In the new version (12-08-2019) I saved the gene files as RDS files instead of RData
-          if(save_as == "RData"){
-            load(paste(indir, mss[j], sep="/"))
-          } else if (save_as == "RDS"){
-            metaboliteSet <- as.matrix(readRDS(paste(indir, mss[j], sep="/")))
-          }
+        # patient_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed)
         
-        gene_in <- strsplit(mss[j], split = "\\.")[[1]][1]
-        
-        # The complete metabolitesets like they are loaded here are already named 'metaboliteSet'
-        # result_mets_x is the name of how the RData file is loaded in and depends on the step size.
-        # if (step==1){
-        #   metaboliteSet <- result_mets_1
-        # } else if (step==2){
-        #   metaboliteSet <- result_mets_2
-        # } else if (step==3){
-        #   metaboliteSet <- result_mets_3
-        # } else if (step==4){
-        #   metaboliteSet <- result_mets_4
-        # } else {
-        #   metaboliteSet <- result_mets_0
+        # Load in gene file names
+        # mss <- c(mss, dis_gene)
+        # if (unlist(strsplit(list.files(indir)[1], split = "\\."))[2] == "RData"){
+        #   save_as <- "RData"
+        #   mss <- paste0(mss,".RData")
+        # } else if (unlist(strsplit(list.files(indir)[1], split = "\\."))[2] == "RDS"){
+        #   save_as <- "RDS"
+        #   mss <- paste0(mss,".RDS")
         # }
         
-        if(is.vector(metaboliteSet)) { # for when a single metabolite is present (it is possibly converted to a character vector)
-          dimnames <- names(metaboliteSet)
-          metaboliteSet <- matrix(metaboliteSet, nrow = 1)
-          colnames(metaboliteSet) <- dimnames
-          rm(dimnames)
-        }
         
         
+        # step_folder <- paste0(patient_folder,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
+        # step_folder <- paste0(date_run,"/", patient, "_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
+        # step_folder <- paste0(date_run,"/", patient, redo,"_", dataset,"/seed",seed,"/maxrxn",maxrxn,"_thresh_n",thresh_F_neg,"_p",thresh_F_pos,"_step_", step)
+        
+        # dir.create(paste0(code_dir,"/../",outdir,step_folder), recursive = TRUE, showWarnings = FALSE)
+        
+        metSetResult = NULL
+        nMets = NULL    # list with number of metabolites per gene, not used for any calculations, but only for output excel file.
+        
+        for (j in 1:length(mss)){
+          # for (j in 1:70){
+          # if(j%%5 == 0) cat(paste0(j, "%... "))
+          # if(j%%33 == 0) cat("gene:", mss[j], "number:", j,"\n")
+          # Skip the gene if there is no metabolite pathway xls_data available, elsewise, load its file
+          if (!file.exists(paste(indir, mss[j], sep="/"))) next
+          
+            # In the new version (12-08-2019) I saved the gene files as RDS files instead of RData
+            if(save_as == "RData"){
+              load(paste(indir, mss[j], sep="/"))
+            } else if (save_as == "RDS"){
+              metaboliteSet <- as.matrix(readRDS(paste(indir, mss[j], sep="/")))
+            }
+          
+          gene_in <- strsplit(mss[j], split = "\\.")[[1]][1]
+          
+          # The complete metabolitesets like they are loaded here are already named 'metaboliteSet'
+          # result_mets_x is the name of how the RData file is loaded in and depends on the step size.
+          # if (step==1){
+          #   metaboliteSet <- result_mets_1
+          # } else if (step==2){
+          #   metaboliteSet <- result_mets_2
+          # } else if (step==3){
+          #   metaboliteSet <- result_mets_3
+          # } else if (step==4){
+          #   metaboliteSet <- result_mets_4
+          # } else {
+          #   metaboliteSet <- result_mets_0
+          # }
+          
+          if(is.vector(metaboliteSet)) { # for when a single metabolite is present (it is possibly converted to a character vector)
+            dimnames <- names(metaboliteSet)
+            metaboliteSet <- matrix(metaboliteSet, nrow = 1)
+            colnames(metaboliteSet) <- dimnames
+            rm(dimnames)
+          }
+          
+          
+          
+          
+          # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+          # Remove metabolites ------------------------------------------------------
+          # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+          
+          # Remove any metabolites that are non-informative
+          for(identifier in c("chebi","kegg","pubchem")){
+            metaboliteSet <- removeMets(metaboliteSet, mets2remove, identifier)
+          }
+          
+          # Get rid of any rows that don't have an hmdb code and go to next gene if none are left
+          index <- which(metaboliteSet[,"hmdb"] == "character(0)")
+          if (length(index)>0) metaboliteSet <- metaboliteSet[-index,,drop=FALSE]
+          if (nrow(metaboliteSet) == 0) next
+          
+          # Or that do not appear in the dataset
+          index <- which(!as.vector(unlist(lapply(metaboliteSet[,"hmdb"], function(x) length(grep(x, rownames(Zint_pruned))) > 0))))
+          if (length(index)>0) metaboliteSet <- metaboliteSet[-index,,drop=FALSE]
+          if (nrow(metaboliteSet) == 0) next
+  
+          # Remove duplicate metabolites, but collate their data if they are known under different ID's/names
+          if(nrow(metaboliteSet) >1){
+            tmp <- as.data.frame(metaboliteSet[apply(apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, real_duplicated), 1, any),])
+            setDT(tmp)
+            tmp <- make.data.table(tmp, "hmdb")
+            tmp <- make.data.table(tmp, "chebi")
+            metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, real_duplicated), 1, all),]
+            metaboliteSet <- rbind(metaboliteSet, as.matrix(tmp[,-1]))
+            rm(tmp)
+          }
+          
+          # nMets <- c(nMets,nrow(metaboliteSet))
+          
+          # Manual fix for the metabolites known under "HMDB0012482, HMDB0002281" (same, but different in the hmdb dataset)
+          if(length(grep("HMDB0002281", metaboliteSet[,"hmdb"])) | length(grep("HMDB0012482", metaboliteSet[,"hmdb"]))){
+            HMDB_index <- unique(grep("HMDB0002281", metaboliteSet[,"hmdb"]),grep("HMDB0012482", metaboliteSet[,"hmdb"]))
+            metaboliteSet[HMDB_index,"hmdb"] <- "HMDB0002281"
+          }
+          
+          retVal = performMSEA(metaboliteSet = metaboliteSet, 
+                               # av_int_and_z_values_matrix = Zint_values, 
+                               av_int_and_z_values_matrix = Zint_pruned,
+                               # patient = old_patient_number, 
+                               patient = patient, 
+                               gene_in, 
+                               thresh_F_pos, 
+                               thresh_F_neg, 
+                               path = paste0(code_dir,"/../", outdir), 
+                               top, 
+                               id, 
+                               # patient_folder = step_folder,
+                               plot = FALSE
+          )
+          # cat(retVal, "\n")
+          p_value = as.numeric(retVal$p.value)
+          if (length(p_value)==0){
+            p_value=NA
+          }
+          # metSetResult <- rbind(metSetResult, c("p.value"=p_value, "patient"=patient, "metabolite.set"=gene_in))
+          # 
+          # nMets <- nrow(metaboliteSet)
+          # tmp <- data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
+          nMets <- nrow(metaboliteSet)
+          metSetResult <- data.frame(rbind(metSetResult, c("metabolite.set"=gene_in, 
+                                                           "p.value"=signif(p_value, digits = 5), 
+                                                           "mets in set"=nMets, 
+                                                           "mets exc thres"=retVal$mets_exc_thres
+                                                           )
+                                           ), stringsAsFactors = FALSE)
+          
+          }
         
         
-        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        # Remove metabolites ------------------------------------------------------
-        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        # genExcelFileShort(list = as.data.frame(metSetResult[order(as.numeric(metSetResult[,"p.value"])),]), 
+        #                   wbfile = paste0(outdir,"/", step_folder,"/MSEA_results.xls"))
+        metSetResult <- metSetResult[order(as.numeric(metSetResult[,"p.value"])),]
+        # save(metSetResult, file = paste0(outdir, step_folder,"/MSEA_results.RData"))
         
-        # Remove any metabolites that are non-informative
-        for(identifier in c("chebi","kegg","pubchem")){
-          metaboliteSet <- removeMets(metaboliteSet, mets2remove, identifier)
-        }
+        rank_dis_genes <- which(metSetResult$metabolite.set %in% dis_gene)
+        total_genes <- nrow(metSetResult)
+        tmp_Patient_metSetResult <- as.data.table(cbind(metSetResult[rank_dis_genes,],
+                                                        "Position" = rank_dis_genes,
+                                                        "Last_position" = total_genes))
+        tmp_Patient_metSetResult[, c("Z_threshold","Step","Max_rxn","Seed","PatientID") := list(
+          threshs, step, maxrxn, seed, paste(dataset, patient, sep = "^")
+        )]
         
-        # Get rid of any rows that don't have an hmdb code and go to next gene if none are left
-        index <- which(metaboliteSet[,"hmdb"] == "character(0)")
-        if (length(index)>0) metaboliteSet <- metaboliteSet[-index,,drop=FALSE]
-        if (nrow(metaboliteSet) == 0) next
         
-        # Or that do not appear in the dataset
-        index <- which(!as.vector(unlist(lapply(metaboliteSet[,"hmdb"], function(x) length(grep(x, rownames(Zint_pruned))) > 0))))
-        if (length(index)>0) metaboliteSet <- metaboliteSet[-index,,drop=FALSE]
-        if (nrow(metaboliteSet) == 0) next
-
-        # Remove duplicate metabolites, but collate their data if they are known under different ID's/names
-        if(nrow(metaboliteSet) >1){
-          tmp <- as.data.frame(metaboliteSet[apply(apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, real_duplicated), 1, any),])
-          setDT(tmp)
-          tmp <- make.data.table(tmp, "hmdb")
-          tmp <- make.data.table(tmp, "chebi")
-          metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, real_duplicated), 1, all),]
-          metaboliteSet <- rbind(metaboliteSet, as.matrix(tmp[,-1]))
-          rm(tmp)
-        }
+        Patient_metSetResult <- rbind(Patient_metSetResult, tmp_Patient_metSetResult)
+        # save(metSetResult, file = paste0(code_dir,"/../", outdir, step_folder,"/MSEA_results.RData"))
+        rm(tmp_Patient_metSetResult)
         
-        # nMets <- c(nMets,nrow(metaboliteSet))
-        
-        # Manual fix for the metabolites known under "HMDB0012482, HMDB0002281" (same, but different in the hmdb dataset)
-        if(length(grep("HMDB0002281", metaboliteSet[,"hmdb"])) | length(grep("HMDB0012482", metaboliteSet[,"hmdb"]))){
-          HMDB_index <- unique(grep("HMDB0002281", metaboliteSet[,"hmdb"]),grep("HMDB0012482", metaboliteSet[,"hmdb"]))
-          metaboliteSet[HMDB_index,"hmdb"] <- "HMDB0002281"
-        }
-        
-        retVal = performMSEA(metaboliteSet = metaboliteSet, 
-                             # av_int_and_z_values_matrix = Zint_values, 
-                             av_int_and_z_values_matrix = Zint_pruned,
-                             patient = patient, 
-                             gene_in, 
-                             thresh_F_pos, 
-                             thresh_F_neg, 
-                             path = paste0(code_dir,"../", outdir), 
-                             top, 
-                             id, 
-                             patient_folder = step_folder,
-                             plot = FALSE
-        )
-        # cat(retVal, "\n")
-        p_value = as.numeric(retVal$p.value)
-        if (length(p_value)==0){
-          p_value=NA
-        }
-        # metSetResult <- rbind(metSetResult, c("p.value"=p_value, "patient"=patient, "metabolite.set"=gene_in))
-        # 
-        # nMets <- nrow(metaboliteSet)
-        # tmp <- data.frame("HGNC"=metSetResult[,3],"p.value"=as.numeric(metSetResult[,"p.value"]), "metabolites"=nMets)
-        nMets <- nrow(metaboliteSet)
-        metSetResult <- data.frame(rbind(metSetResult, c("metabolite.set"=gene_in, 
-                                                         "p.value"=signif(p_value, digits = 5), 
-                                                         "mets in set"=nMets, 
-                                                         "mets exc thres"=retVal$mets_exc_thres
-                                                         )
-                                         ), stringsAsFactors = FALSE)
-        
+        cat("\n\n")
       }
-      
-      # genExcelFileShort(list = as.data.frame(metSetResult[order(as.numeric(metSetResult[,"p.value"])),]), 
-      #                   wbfile = paste0(outdir,"/", step_folder,"/MSEA_results.xls"))
-      metSetResult <- metSetResult[order(as.numeric(metSetResult[,"p.value"])),]
-      # save(metSetResult, file = paste0(outdir, step_folder,"/MSEA_results.RData"))
-      save(metSetResult, file = paste0(code_dir,"../", outdir, step_folder,"/MSEA_results.RData"))
-      
-      cat("\n\n")
-    # }
-  # }
+    }
+  }
+  names(Patient_metSetResult)[1:4] <- c("Gene", "P.value", "Mets_in_set", "Mets_exc_thresh")
+  dir.create(paste0(code_dir,"/../", outdir, date_run,"/", patient, redo,"_", dataset,"/seed",seed),recursive = TRUE, showWarnings = FALSE)
+  save(Patient_metSetResult, file = paste0(code_dir,"/../", outdir, date_run,"/", patient, redo,"_", dataset,"/seed",seed, "/MSEA_results.RData"))
 # }
