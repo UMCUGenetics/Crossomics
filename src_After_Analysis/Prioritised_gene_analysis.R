@@ -803,6 +803,46 @@ ggsave(paste0(outdir_name,"/",train_val,"_Singlepanel_Av_Std",var_name,"_",sub_n
        width = 200, height = 130, dpi=resolution, units = "mm")
 
 
+##### Boxplot of a single panel ---------------------------------------
+nm <- 0
+DT[,Patient_follow_number := 0]
+DT[, c("Min_Rank_Patient","Max_Rank_Patient") := list(min(Total_genes),max(Total_genes)), by = .(Step, Z_threshold, Max_rxn, PatientID)]
+for(i in unique(DT$PatientID)){
+  nm <- nm + 1
+  DT[PatientID == i, Patient_follow_number := nm]
+}
+
+# Relative ranks
+p <- ggplot(DT[Z_threshold == "-3, 3" & Max_rxn == 10 & P.value != 1 & Step == 5], aes(x = Patient_follow_number, y = Pos_frac)) +
+  geom_boxplot(aes(fill = Patient_follow_number, group = PatientID)) + theme(legend.position = "none") +
+  geom_ribbon(aes(x = Patient_follow_number, ymin=6/Max_Rank_Patient,ymax=6/Min_Rank_Patient),alpha=0.2, fill = "yellow") +
+  geom_ribbon(aes(x = Patient_follow_number, ymin=6/Min_Rank_Patient,ymax=0.6),alpha=0.2, fill = "red") +
+  geom_ribbon(aes(x = Patient_follow_number, ymin = 0, ymax=6/Max_Rank_Patient),alpha=0.2, fill = "green") +
+  theme(axis.text.x = element_text(size = 6, angle = 60, hjust = 1)) +
+  ylim(0,0.6) +
+  scale_x_continuous(labels = unique(DT[Z_threshold == "-3, 3" & Max_rxn == 10 & P.value != 1 & Step == 5, PatientID]), 
+                     breaks = unique(DT[Z_threshold == "-3, 3" & Max_rxn == 10 & P.value != 1 & Step == 5,Patient_follow_number]),
+                     name = "Patient ID")
+ggsave(paste0(outdir_name,"/",train_val,"Relative_Rank",var_name,"_",sub_name,".png"), plot = p,
+       width = 400, height = 260, dpi=resolution, units = "mm")
+
+
+# Absolute ranks
+p <- ggplot(DT[Z_threshold == "-3, 3" & Max_rxn == 10 & P.value != 1 & Step == 5], aes(x = Patient_follow_number, y = Position)) +
+  geom_boxplot(aes(fill = Patient_follow_number, group = PatientID)) + theme(legend.position = "none") +
+  # geom_ribbon(aes(x = Patient_follow_number, ymin=6/Max_Rank_Patient,ymax=6/Min_Rank_Patient),alpha=0.2, fill = "yellow") +
+  # geom_ribbon(aes(x = Patient_follow_number, ymin=5,ymax=Max_Rank_Patient),alpha=0.2, fill = "red") +
+  geom_ribbon(aes(x = Patient_follow_number, ymin=5,ymax=Min_Rank_Patient),alpha=0.2, fill = "red") +
+  geom_ribbon(aes(x = Patient_follow_number, ymin=Min_Rank_Patient,ymax=Max_Rank_Patient),alpha=0.2, fill = "darkred") +
+  geom_ribbon(aes(x = Patient_follow_number, ymin = 0, ymax=5),alpha=0.2, fill = "green") +
+  theme(axis.text.x = element_text(size = 6, angle = 60, hjust = 1))  +
+  scale_x_continuous(labels = unique(DT[Z_threshold == "-3, 3" & Max_rxn == 10 & P.value != 1 & Step == 5, PatientID]), 
+                     breaks = unique(DT[Z_threshold == "-3, 3" & Max_rxn == 10 & P.value != 1 & Step == 5,Patient_follow_number]),
+                     name = "Patient ID")
+ggsave(paste0(outdir_name,"/",train_val,"Absolute_Rank",var_name,"_",sub_name,".png"), plot = p,
+       width = 400, height = 260, dpi=resolution, units = "mm")
+
+
 
 
 
