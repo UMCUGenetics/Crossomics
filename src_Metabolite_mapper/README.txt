@@ -15,7 +15,7 @@ HOW TO USE:
 To run the MetaboliteMapper on the HPC: All files necessary for running these scripts need to be transferred to the HPC, with the file structures:
 1. src_Metabolite_Mapper/... files:
 	a. GeneMetaboliteMapper.R and its supportive scripts (see PIPELINE HIERARCHY/STRUCTURE)
-	b. run_seeds.sh, run_array.sh and run_MetabMapper.sh. These files will call each other (in this order). Any parameter that the script uses can be changed in one of these files (see .SH FILES).
+	b. run_full_MetabMapper.sh and run_R.sh. These files will call each other (in this order). Any parameter that the script uses can be changed in one of these files (see .SH FILES).
 2. Data/... files:
 	a. xxx.RData file containing all patients, their disease genes, data-file locations and patient numbers
 	b. Adductsums files (Project xxx/whatever/path/follows/Bioinformatics/adductsums files): Patient/control metabolomics intensity files, which can be copied from the Metab (Y:) drive.
@@ -26,11 +26,9 @@ To run the MetaboliteMapper on the HPC: All files necessary for running these sc
 
 
 .SH FILES:
-** run_seeds.sh runs run_array.sh and gives it 1 seed. All used seeds need to be changed/entered inside the run_seeds script and these MUST be the same as those used for creating the mock_gene files (its in their name).
-** run_array.sh will call on run_MetabMapper.sh and submit that job via qsub. The directory in which all scripts are present must be correctly present in this script as 'code_dir'. Any changes in reserving HPC space and time must be adjusted in this script.
-** run_MetabMapper.sh will run the GeneMetabMapper.R script via R. There are 2 important things with this script: 
-	1. The location of R must be present in this script (I use R 3.6.0, while the standard HPC R is different). If running the scripts malfunctions, it is a good idea to also check whether all R libraries are correctly installed on the HPC. 
-	2. All parameters must be adjusted/entered in this script as it will loop over all of them. maxrxn and step are the literal parameter values, but threshold is only the NUMBER of parameter options (as this parameter actually consists of 2 values inside the .R scripts and this was easier to code).
+** run_full_MetabMapper.sh creates a qsub job of run_R.sh and gives it 1 file name containing a seed, all parameter combinations with each one being 1 single string and some directories where to find my own R version and the coding directory. All used seeds (their filenames) are read in from a folder with this kind path "/hpc/shared/dbg_mz/marten/Crossomics_2019_10_25/Results/Mock_genes". It is vital that the different parameter values are separated with a ',' (comma) inside the string, so my R script can easily separate them. It is also vital to supply the number of patients that must be run; this is because the job-submission works on an array-basis, which takes simple 1-n sub-jobs and gives that number to the script which is called.
+
+** run_R.sh will run the GeneMetabMapper.R script via Rscript. Everything inside this script is given to it via run_full_MetabMapper.sh, so the only thing that could possibly be changed here is when the R script has had its name changed or the number or order or parameter values which are supplied to it has changed.
 
 
 IMPORTANT NOTES:
