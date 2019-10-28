@@ -117,9 +117,36 @@ DT <- NULL
 # Collate results to 1 data table -----------------------------------------
 ###########################################################################
 
+DT_nr_rows <- nrow(xls_unique) * length(seeds) * length(max_rxns) * length(Z_thresholds) * length(steps)
+
+string_vec <- rep("", DT_nr_rows)
+double_vec <- rep(0, DT_nr_rows)
+# int_vec <- rep(0L, DT_nr_rows)
+
+DT <- data.table(Patient = string_vec,
+                 Train_Val_Set = string_vec,
+                 DBS = double_vec,
+                 Gene = string_vec,
+                 Gene_met_set_size = double_vec,
+                 Protein_function = string_vec,
+                 Transporter = string_vec,
+                 Position = double_vec,
+                 Total_genes = double_vec,
+                 # Rev_Pos_frac = double_vec,
+                 Rev_Pos_frac = double_vec,
+                 # Pos_frac = double_vec,
+                 Pos_frac = double_vec,
+                 Z_threshold = string_vec,
+                 Step = double_vec,
+                 Max_rxn = double_vec,
+                 P.value = double_vec,
+                 Seed = double_vec)
+
+row_nr <- 1
+
 for (i in 1:nrow(xls_unique)){
   patient <- unlist(xls_unique[i, Patient])
-  DBS <- unlist(xls_unique[i, DBS])
+  dbs <- unlist(xls_unique[i, DBS])
   prot_func <- xls_unique$Gene.product.function[i]
   if(is.null(prot_func)) prot_func <- NA
   if (length(patients_not_done) > 0){
@@ -130,6 +157,7 @@ for (i in 1:nrow(xls_unique)){
   dis_gene <- unlist(strsplit(dis_gene, split = "; "))
   dis_gene <- gsub("^MUT$", "MMUT", dis_gene) # fix MMUT thing
   is_trans <- xls_unique$Gene.product.function[i] == "transporter"
+  train_val_set <- xls_unique$Type.set[i]
   if(length(is_trans) == 0) is_trans <- NA
   if(!patient %in% patients_redone){
     patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
@@ -185,30 +213,37 @@ for (i in 1:nrow(xls_unique)){
           
           gene_set <- nrow(MSEA_results)
           
-          patient_DT <- data.table(Patient = patient,
-                                   DBS = DBS,
-                                   Gene = paste(dis_gene,collapse = ";"),
-                                   Gene_met_set_size = set_size,
-                                   Protein_function = prot_func,
-                                   Transporter = is_trans,
-                                   Position = rank,
-                                   Total_genes = gene_set,
-                                   # Rev_Pos_frac = 1-((dis_pos-1)/(gene_set-1)),
-                                   Rev_Pos_frac = 1-((rank-1)/(gene_set-1)),
-                                   # Pos_frac = dis_pos/gene_set,
-                                   Pos_frac = rank/gene_set,
-                                   Z_threshold = threshs,
-                                   Step = step,
-                                   Max_rxn = maxrxn,
-                                   P.value = p.value,
-                                   Seed = seed)
+          # patient_DT <- data.table(Patient = patient,
+          #                          Train_Val_Set = train_val_set,
+          #                          DBS = dbs,
+          #                          Gene = paste(dis_gene,collapse = ";"),
+          #                          Gene_met_set_size = set_size,
+          #                          Protein_function = prot_func,
+          #                          Transporter = is_trans,
+          #                          Position = rank,
+          #                          Total_genes = gene_set,
+          #                          # Rev_Pos_frac = 1-((dis_pos-1)/(gene_set-1)),
+          #                          Rev_Pos_frac = 1-((rank-1)/(gene_set-1)),
+          #                          # Pos_frac = dis_pos/gene_set,
+          #                          Pos_frac = rank/gene_set,
+          #                          Z_threshold = threshs,
+          #                          Step = step,
+          #                          Max_rxn = maxrxn,
+          #                          P.value = p.value,
+          #                          Seed = seed)
           
           ###########################################################################
           # Make datatable of all patients ------------------------------------------
           ###########################################################################
           
-          DT <- rbind(DT, patient_DT)
-          
+          # DT <- rbind(DT, patient_DT)
+          DT[row_nr, c("Patient","Train_Val_Set","DBS", "Gene", "Gene_met_set_size", "Protein_function", "Transporter", 
+                       "Position", "Total_genes", "Rev_Pos_frac", "Pos_frac", "Z_threshold", "Step", "Max_rxn",
+                       "P.value", "Seed") := list(
+                         patient, train_val_set, dbs, paste(dis_gene,collapse = ";"), as.integer(set_size), as.character(prot_func), as.character(is_trans), 
+                         rank, gene_set, 1-((rank-1)/(gene_set-1)), rank/gene_set, threshs, step, maxrxn,
+                         as.double(p.value), seed)]
+          row_nr =+ 1
         }
       }
     }
