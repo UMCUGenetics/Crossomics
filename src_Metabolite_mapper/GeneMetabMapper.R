@@ -355,17 +355,18 @@ mets2remove <- as.data.frame(readRDS(paste0(code_dir,"/../Data/mets2remove.RDS")
   # for (threshold in 1:2){
     thresh_F_pos <- thresh_pos_list[threshold]
     thresh_F_neg <- thresh_neg_list[threshold]
-    cat("Z-value threshold:", thresh_F_neg,"/", thresh_F_pos, "\n")
+    # cat("Z-value threshold:", thresh_F_neg,"/", thresh_F_pos, "\n")
     threshs <- paste(c(thresh_F_pos,thresh_F_neg), collapse = ", ")
     
     for (step in steps){
     # for (step in c(steps[4],steps[5])){
-      cat("step:", step, "\n")
+      # cat("step:", step, "\n")
       overview <- NULL # at the end
       
       for (maxrxn in max_rxns){
       # for (maxrxn in c(max_rxns[5],max_rxns[6])){
-        cat("Max rxn:", maxrxn, "\n")
+        # cat("Max rxn:", maxrxn, "\n")
+        cat("Z-value threshold:", thresh_F_neg,"/", thresh_F_pos, "Max rxn:", maxrxn, "step:", step, "\n")
       
         if (date_input >= "2019-08-12"){
           # indir <- paste0("Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
@@ -514,6 +515,18 @@ mets2remove <- as.data.frame(readRDS(paste0(code_dir,"/../Data/mets2remove.RDS")
         #                   wbfile = paste0(outdir,"/", step_folder,"/MSEA_results.xls"))
         metSetResult <- metSetResult[order(as.numeric(metSetResult[,"p.value"])),]
         # save(metSetResult, file = paste0(outdir, step_folder,"/MSEA_results.RData"))
+        
+        # Add any disease genes that were completely missed to the results
+        for(gene in dis_gene){
+          tmp_index <- which(metSetResult$metabolite.set == gene)
+          if(length(tmp_index) == 0){
+            metSetResult <-rbind(metSetResult, c("metabolite.set"=gene, 
+                                                 "p.value" = 1, 
+                                                 "mets in set" = 0, 
+                                                 "mets exc thres" = 0)
+            )
+          }
+        }
         
         rank_dis_genes <- which(metSetResult$metabolite.set %in% dis_gene)
         total_genes <- nrow(metSetResult)
