@@ -48,32 +48,25 @@ if(Sys.getenv("RSTUDIO") != "1") {
   suppressMessages(library("tidyr",lib.loc = R_location))
   suppressMessages(library("data.table",lib.loc = R_location))
   suppressMessages(library("dplyr",lib.loc = R_location))
+  mock_date <- NULL
   
-  # # Supply the maxrxn and the directory where this script is placed
-  # cmd_args <- commandArgs(trailingOnly = TRUE)
-  # # threshold <- as.numeric(cmd_args[1])
-  # # maxrxn <- as.numeric(cmd_args[2])
-  # # step <- as.numeric(cmd_args[3])
-  # # patient_number <- as.numeric(cmd_args[4])
-  # # code_dir <- cmd_args[5]
-  # # seed <- cmd_args[6]
-  # patient_number <- as.numeric(cmd_args[1])
-  # code_dir <- cmd_args[2]
-  # seed_file <- cmd_args[3]
-  # seed <- as.integer(sub(".txt", "", sub(".*seed", "", seed_file)))
 } else {
   library("stringr") # string manipulation, add leading 0's
   library("Cairo")
   library("rstudioapi")
   library("tidyr")
-  # library("heatmap3")
+
   library("data.table")
-  thresholds <- c(1,2,3,4) # possible 1, 2, 3, 4, 5
-  max_rxns <- c(8,10,12,15,17,19) # possible: 8, 10, 12, 15, 17, 19
-  steps <- c(0,1,2,3,4,5) # possible 1, 2, 3, 4, 5
-  patient_number <- 1 # possible 1:51
+
+  patient_number <- 6
+  thresholds <- "-1;1.5,-1.5;2,-3;3,-5;5,-1.5;1.5,-2;2"
+  max_rxns <-"8,10,12,15,17,19"
+  max_rxns <- as.numeric(unlist(strsplit(max_rxns, split = ",")))
+  steps <- "0,1,2,3,4,5"
+  steps <- as.numeric(unlist(strsplit(steps, split = ",")))
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  seed <- 232
+  seed <- 752
+  mock_date <- "2019-10-22/"
 }
 
 
@@ -84,6 +77,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
 # thresholds <- c(1,2,3,4,5,6) 
 # max_rxns <- c(8,10,12,15,17,19) 
 # steps <- c(0,1,2,3,4,5) 
+outdir <- "Results"
 
 Subset_Of_Patients <- FALSE
 
@@ -104,6 +98,7 @@ top <- 20
 id <- "hmdb"
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
 date_run <- "2019-10-25" # The date of this run 
+mock_date <- "2019-10-22/"
 nr_mocks <- 200
 outdir <- "Results/"
 
@@ -178,8 +173,8 @@ load(paste0(code_dir,"/../Data/", train_data_name))
 
 # Load mock gene set
 # mss <- read.table(paste0("./Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
-mss <- read.table(paste0(code_dir,"/../Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
-# mss <- read.table(paste0(code_dir,"/../Results/Mock_genes/2019-10-22/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+# mss <- read.table(paste0(code_dir,"/../Results/Mock_genes/mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+mss <- read.table(paste0(code_dir,"/../Results/Mock_genes/",mock_date,"mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
 
 # correct naming of new training set to old format
 if(sum(colnames(xls_data) == "Patient number in set" | colnames(xls_data) == "Patient.number.in.set") > 0){
