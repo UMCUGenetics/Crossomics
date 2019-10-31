@@ -102,94 +102,94 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   p = retVal$p.value
   ###########################################################################################
     
-  
-  # Code for creating just the metsInset exceding the thresholds
-  metsInset <- metsInset[metsInset$InSetExceedingThresh,]
-  
-  ints <- av_int_and_z_values_matrix[rownames(metsInset), -grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
-  z_values <- av_int_and_z_values_matrix[rownames(metsInset), grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
-  
-  
-  rownames(ints) = metsInset[,"names"]
-  rownames(z_values) = metsInset[,"names"]
-  
-  ints <- ints[, -grep("avg.int.controls", colnames(ints), fixed=TRUE),drop=FALSE]
-  
-  # Remove negative and NA values
-  ints[ints<0] <- NA
-  ints[is.na(ints)] <- 0
-  
-  # Whole column zeros
-  remove <- which(colSums(ints)==0)
-  if (length(remove)>0) ints = ints[,-as.numeric(remove), drop=FALSE]
-  
-  if (length(z_values) > 1) {
-    
-    if(!plot){
-      ####
-      # ordering of heatmap without the heatmap (as heatmap3 would have done it; look at its source code)
-      distfun = function(x) as.dist(1 - cor(t(x),use="pa")) # use of pa is not necessary, NA values are not present
-      # calculate means
-      Rowv <- rowMeans(ints)
-      Colv <- colMeans(ints)
-      # calculate distribution and make dencrogram of rows
-      distMatrixR <- distfun(ints)
-      hcr <- hclust(distMatrixR,method="complete")
-      ddr <- as.dendrogram(hcr)
-      #reorder dendrogram
-      reorderfun = function(d, w) reorder(d, w)
-      ddr <- reorderfun(ddr, Rowv)
-      
-      # Same for columns:
-      distMatrixC <- distfun(t(ints))
-      hcc <- hclust(distMatrixC,method="complete")
-      ddc <- as.dendrogram(hcc)
-      ddc <- reorderfun(ddc, Colv)
-      
-      rowInd <- order.dendrogram(ddr)
-      colInd <- order.dendrogram(ddc)
-      
-      # order data according to dendrogram
-      ints <- ints[rowInd, colInd]
-      labels = colnames(z_values)
-      z_values = as.data.frame(z_values[rowInd,])
-      colnames(z_values)=labels
-      metsInset = metsInset[rowInd,]
-      ####
-    } else {
-      CairoPNG(filename=paste0(path, "/", patient_folder, "/", gene_in,".png"), width, height)
-      
-      # hm = heatmap(as.matrix(ints),
-      #              scale="row",
-      #              #distfun = "euclidean", #spearman.dist,
-      #              col=colorRampPalette(c("yellow","blue"))(100),
-      #              margins=c(2.5,26),
-      #              labRow = metsInset[,"hmdb_set"])
-      #
-      hm <- heatmap3::heatmap3(ints,
-                               col = colorRampPalette(c("navy", "white", "firebrick3"))(1024),
-                               balanceColor = TRUE,
-                               labRow = metsInset[,"hmdb_set"])
-      #
-      dev.off()
-      
-      ints = ints[hm$rowInd,hm$colInd]
-      labels = colnames(z_values)
-      z_values = as.data.frame(z_values[hm$rowInd,])
-      colnames(z_values)=labels
-      metsInset = metsInset[hm$rowInd,]
-    }
-  }
-  
-  ints = data.frame("compound"=rownames(ints),
-                    "HMDB_set"=metsInset[,"hmdb_set"], 
-                    "Z score" = as.numeric(z_values[,grep(colnames(z_values),pattern=toString(patient),fixed=TRUE)]),
-                    "path"=metsInset[,"path"],
-                    "HMDB"=rownames(metsInset),
-                    ints)
-  
-  ints=ints[order(ints[,"Z.score"]),]
-  
+  # 
+  # # Code for creating just the metsInset exceding the thresholds
+  # metsInset <- metsInset[metsInset$InSetExceedingThresh,]
+  # 
+  # ints <- av_int_and_z_values_matrix[rownames(metsInset), -grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  # z_values <- av_int_and_z_values_matrix[rownames(metsInset), grep("av.z", colnames(av_int_and_z_values_matrix), fixed=TRUE),drop=FALSE]
+  # 
+  # 
+  # rownames(ints) = metsInset[,"names"]
+  # rownames(z_values) = metsInset[,"names"]
+  # 
+  # ints <- ints[, -grep("avg.int.controls", colnames(ints), fixed=TRUE),drop=FALSE]
+  # 
+  # # Remove negative and NA values
+  # ints[ints<0] <- NA
+  # ints[is.na(ints)] <- 0
+  # 
+  # # Whole column zeros
+  # remove <- which(colSums(ints)==0)
+  # if (length(remove)>0) ints = ints[,-as.numeric(remove), drop=FALSE]
+  # 
+  # if (length(z_values) > 1) {
+  #   
+  #   if(!plot){
+  #     ####
+  #     # ordering of heatmap without the heatmap (as heatmap3 would have done it; look at its source code)
+  #     distfun = function(x) as.dist(1 - cor(t(x),use="pa")) # use of pa is not necessary, NA values are not present
+  #     # calculate means
+  #     Rowv <- rowMeans(ints)
+  #     Colv <- colMeans(ints)
+  #     # calculate distribution and make dencrogram of rows
+  #     distMatrixR <- distfun(ints)
+  #     hcr <- hclust(distMatrixR,method="complete")
+  #     ddr <- as.dendrogram(hcr)
+  #     #reorder dendrogram
+  #     reorderfun = function(d, w) reorder(d, w)
+  #     ddr <- reorderfun(ddr, Rowv)
+  #     
+  #     # Same for columns:
+  #     distMatrixC <- distfun(t(ints))
+  #     hcc <- hclust(distMatrixC,method="complete")
+  #     ddc <- as.dendrogram(hcc)
+  #     ddc <- reorderfun(ddc, Colv)
+  #     
+  #     rowInd <- order.dendrogram(ddr)
+  #     colInd <- order.dendrogram(ddc)
+  #     
+  #     # order data according to dendrogram
+  #     ints <- ints[rowInd, colInd]
+  #     labels = colnames(z_values)
+  #     z_values = as.data.frame(z_values[rowInd,])
+  #     colnames(z_values)=labels
+  #     metsInset = metsInset[rowInd,]
+  #     ####
+  #   } else {
+  #     CairoPNG(filename=paste0(path, "/", patient_folder, "/", gene_in,".png"), width, height)
+  #     
+  #     # hm = heatmap(as.matrix(ints),
+  #     #              scale="row",
+  #     #              #distfun = "euclidean", #spearman.dist,
+  #     #              col=colorRampPalette(c("yellow","blue"))(100),
+  #     #              margins=c(2.5,26),
+  #     #              labRow = metsInset[,"hmdb_set"])
+  #     #
+  #     hm <- heatmap3::heatmap3(ints,
+  #                              col = colorRampPalette(c("navy", "white", "firebrick3"))(1024),
+  #                              balanceColor = TRUE,
+  #                              labRow = metsInset[,"hmdb_set"])
+  #     #
+  #     dev.off()
+  #     
+  #     ints = ints[hm$rowInd,hm$colInd]
+  #     labels = colnames(z_values)
+  #     z_values = as.data.frame(z_values[hm$rowInd,])
+  #     colnames(z_values)=labels
+  #     metsInset = metsInset[hm$rowInd,]
+  #   }
+  # }
+  # 
+  # ints = data.frame("compound"=rownames(ints),
+  #                   "HMDB_set"=metsInset[,"hmdb_set"], 
+  #                   "Z score" = as.numeric(z_values[,grep(colnames(z_values),pattern=toString(patient),fixed=TRUE)]),
+  #                   "path"=metsInset[,"path"],
+  #                   "HMDB"=rownames(metsInset),
+  #                   ints)
+  # 
+  # ints=ints[order(ints[,"Z.score"]),]
+  # 
   # if(nrow(ints) > 0) genExcelFileShort(as.data.frame(ints), paste(path, "/", patient_folder, "/", gene_in,".xls",sep=""))
   # if(nrow(ints) > 0) save(ints, file = paste0(path, patient_folder, "/", gene_in,".RData"))
   
