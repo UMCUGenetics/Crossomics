@@ -59,7 +59,7 @@ digit_significance <- 3
 # Exclude patients / diseases
 NoTrans <- FALSE
 subset_patients <- FALSE
-trainingset <- "combined" # possible: TRUE, FALSE, NULL (for all data), "combined" (for all, but separated)
+# trainingset <- "combined" # possible: TRUE, FALSE, NULL (for all data), "combined" (for all, but separated)
 
 # Date of data
 date <- "2019-09-11"
@@ -75,26 +75,28 @@ date <- "2019-09-11"
 ##### Read data -----------------------------------------------------------
 code_dir <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Results/")
 
-if(trainingset == "combined"){
-  train_val <- "trainingset"
-  DT1 <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
-  DT1[,Set := "training"]
-  train_val <- "validationset"
-  DT2 <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
-  DT2[,Set := "validation"]
-  DT <- rbind(DT1, DT2)
-  rm(DT1, DT2)
-} else {
-  if(is.null(trainingset)) {
-    train_val <- "all"
-    DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
-    DT[,Set := "all"]
-  } else {
-    train_val <- ifelse(trainingset, "trainingset", "validationset")
-    DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
-    ifelse(trainingset, DT[,Set := "training"], DT[,Set := "validation"])
-  }
-}
+DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_all.RDS")))
+
+# if(trainingset == "combined"){
+#   train_val <- "trainingset"
+#   DT1 <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
+#   DT1[,Set := "training"]
+#   train_val <- "validationset"
+#   DT2 <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
+#   DT2[,Set := "validation"]
+#   DT <- rbind(DT1, DT2)
+#   rm(DT1, DT2)
+# } else {
+#   if(is.null(trainingset)) {
+#     train_val <- "all"
+#     DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
+#     DT[,Set := "all"]
+#   } else {
+#     train_val <- ifelse(trainingset, "trainingset", "validationset")
+#     DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
+#     ifelse(trainingset, DT[,Set := "training"], DT[,Set := "validation"])
+#   }
+# }
 
 # DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_",train_val,".RDS")))
 
@@ -182,7 +184,7 @@ if(NoTrans) tmpDT <- DT[Transporter==FALSE,,] else tmpDT <- DT
 ##### data table per parameter
 DT_per_parameter <- NULL
 DT_tmp1 <- data.table()
-DT_tmp2 <- data.table()
+# DT_tmp2 <- data.table()
 DT_tmp3 <- data.table()
 DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Set","Prior.frac15","Prior.frac10","Prior.frac05","Prior.frac02","Prior.pos.frac.av.rev","Prior.pos.frac.av","Missed","Missed.frac",
             "Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", "Prior.sd10", "Prior.sd05", "Prior.sd02","Prior.pos.frac.sd.rev","Prior.pos.frac.sd","Missed.sd") :=  
@@ -212,7 +214,8 @@ DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Set","Prior.frac15","Prior.frac10
 DT_tmp3[, c("Step", "Z_threshold", "Max_rxn","Set","Av_non_missed","Sd_non_missed") := tmpDT[P.value != 1, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn, Set)]]
 DT_per_parameter <- merge(DT_tmp1, DT_tmp3, by = c("Step","Z_threshold", "Max_rxn","Set"))
 # DT_per_parameter <- merge(DT_per_parameter, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn"))
-rm(DT_tmp1,DT_tmp2,DT_tmp3)
+# rm(DT_tmp1,DT_tmp2,DT_tmp3)
+rm(DT_tmp1,DT_tmp3)
 
 DT_per_parameter[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
 
