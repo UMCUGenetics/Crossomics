@@ -27,6 +27,7 @@ library("Matrix.utils")
 library("data.table")
 library("stringr") # for patient digit fixing
 
+
 # library("XLConnect") # Only for older results. Switched to .RData files
 # library("xlsx")
 
@@ -40,30 +41,54 @@ Z_thresholds <- c("-1, 1.5", "-1.5, 2", "-3, 3", "-5, 5")
 max_rxns <- c(8, 10, 12, 15, 17, 19)
 steps <- c(0,1,2,3,4,5)
 date <- "2019-09-11"
+seed_date <- "2019-10-22"
+# seeds <- sub(x = list.files(path = paste0(code_dir, "/../Results/Mock_genes/",seed_date,"/")), 
+#              pattern = ".*seed([^seed]*?)\\.txt", 
+#              replacement = "\\1")
 seeds <- c(8372, 2528, 6140, 3880, 2771, 
            8455, 3200, 6250, 4860, 6297, 
            244, 3764, 2464, 3218, 2282, 
            5600, 2359, 8353, 6399, 2001)
-patient_info_file <- "Crossomics_DBS_Marten_Training_Validation.RData"
+patient_info_file <- "Crossomics_DBS_Marten_Training_Validation_updated20190924.RData"
 patients_not_done <- NULL # in format c("P38.1", "P39.1","P40.1")
-trainingset <- TRUE
+trainingset <- NULL # possible: TRUE, FALSE, NULL (for all data)
+
+
 
 
 ###########################################################################
 # Prepare data ------------------------------------------------------------
 ###########################################################################
 
+# Check if there are any patients that have been re-analysed
+redo_index <- grep("REDO", list.files(paste0(code_dir,"/../Results/",date)))
+if(length(redo_index) > 0){
+  patients_redone <- NULL
+  for(ri in 1:length(redo_index)){
+    redo_file <- list.files(paste0(code_dir,"/../Results/",date))[redo_index[ri]]
+    patients_redone <- c(patients_redone, strsplit(redo_file, split = "_")[[1]][1])
+  }
+}
+
 load(paste0(code_dir,"/../Data/", patient_info_file))
 # xls_data <- xlsx::read.xlsx(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.xlsx"), sheetIndex = 1, colIndex = c(1:7), rowIndex = c(1:107), stringsAsFactors = FALSE)
 # save(xls_data, file = paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training_inclProt_function.RData"))
 
-if("Patient number in set" %in% colnames(xls_data)){
-  xls_data$Patient <- unlist(lapply(xls_data$`Patient number in set`, function(x) unlist(strsplit(x, split = "\\."))[1]))
+if("Patient.number.in.set" %in% colnames(xls_data)){
+  xls_data$Patient <- unlist(lapply(xls_data$`Patient.number.in.set`, function(x) unlist(strsplit(x, split = "\\."))[1]))
 } else if ("Patient.number" %in% colnames(xls_data)){
   xls_data$Patient <- unlist(lapply(xls_data$Patient.number, function(x) unlist(strsplit(x, split = "\\."))[1]))
 } else {
   stop("column names of xls_data do not follow a known pattern")
 }
+
+xls_data[, "Patient" := tstrsplit(Patient, "[P.]")[2]]
+xls_data[, "Patient" := paste0("P",str_pad(Patient, width = 3, pad = "0", side = "left"))]
+xls_data[, Gene := str_replace_all(Gene, " ", "")]
+xls_data[, PatientID := do.call(paste, c(.SD, sep = ":")), .SDcols= c("Patient", "Dataset")]
+xls_data[, "DBS" := .N, by = PatientID]
+
+
 
 # columns to paste together
 # cols <- c( 'Dataset' , 'Patient' )
@@ -72,17 +97,18 @@ if("Patient number in set" %in% colnames(xls_data)){
 xls_unique <- xls_data[!duplicated(apply( xls_data[ , c( 'Dataset' , 'Patient' ) ] , 1 , paste , collapse = "_" )),]
 
 # Fix numbering of patients to contain 3 digits
-xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_pad(unlist(strsplit(x, split = "P"))[2], 3, side = "left", pad = "0")))]
+# xls_unique[,Patient := lapply(xls_unique[,Patient], function(x) paste0("P",str_pad(unlist(strsplit(x, split = "P"))[2], 3, side = "left", pad = "0")))]
 
 # fixed_patients <- unlist(lapply(strsplit(xls_unique$Patient[nchar(xls_unique$Patient) <= 3], split = ""), function(x) paste0(x[1],"0",x[2])))
 # xls_unique$Patient[nchar(xls_unique$Patient) == 2] <- fixed_patients
 
 # Remove patients/disease genes who are artifacts
-xls_unique <- xls_unique[Gene != "NA",]
+xls_unique <- xls_unique[Gene != "NA" & (is.na(xls_unique[,`Judith.`]) | `Judith.` == "Inclusion"),]
 
 # select test set or validation set & only non-exlusion patients
-which_set <- ifelse(trainingset == TRUE, "Training set", "Validation set")
-xls_unique <- xls_unique[`Type set` == which_set & (is.na(xls_unique[,`Judith:`]) | `Judith:` == "Inclusion"),]
+# which_set <- ifelse(trainingset == TRUE, "Training set", "Validation set")
+# if(class(which_set) == "character") xls_unique <- xls_unique[`Type.set` == which_set ,]
+
 xls_unique <- as.data.table(xls_unique)
 
 DT <- NULL
@@ -91,8 +117,36 @@ DT <- NULL
 # Collate results to 1 data table -----------------------------------------
 ###########################################################################
 
+DT_nr_rows <- nrow(xls_unique) * length(seeds) * length(max_rxns) * length(Z_thresholds) * length(steps)
+
+string_vec <- rep("", DT_nr_rows)
+double_vec <- rep(0, DT_nr_rows)
+# int_vec <- rep(0L, DT_nr_rows)
+
+DT <- data.table(Patient = string_vec,
+                 Train_Val_Set = string_vec,
+                 DBS = double_vec,
+                 Gene = string_vec,
+                 Gene_met_set_size = double_vec,
+                 Protein_function = string_vec,
+                 Transporter = string_vec,
+                 Position = double_vec,
+                 Total_genes = double_vec,
+                 # Rev_Pos_frac = double_vec,
+                 Rev_Pos_frac = double_vec,
+                 # Pos_frac = double_vec,
+                 Pos_frac = double_vec,
+                 Z_threshold = string_vec,
+                 Step = double_vec,
+                 Max_rxn = double_vec,
+                 P.value = double_vec,
+                 Seed = double_vec)
+
+row_nr <- 1
+
 for (i in 1:nrow(xls_unique)){
   patient <- unlist(xls_unique[i, Patient])
+  dbs <- unlist(xls_unique[i, DBS])
   prot_func <- xls_unique$Gene.product.function[i]
   if(is.null(prot_func)) prot_func <- NA
   if (length(patients_not_done) > 0){
@@ -101,9 +155,16 @@ for (i in 1:nrow(xls_unique)){
   cat("Patient:",patient,"\n")
   dis_gene <- xls_unique$Gene[i]
   dis_gene <- unlist(strsplit(dis_gene, split = "; "))
+  dis_gene <- gsub("^MUT$", "MMUT", dis_gene) # fix MMUT thing
   is_trans <- xls_unique$Gene.product.function[i] == "transporter"
+  train_val_set <- xls_unique$Type.set[i]
   if(length(is_trans) == 0) is_trans <- NA
-  patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
+  if(!patient %in% patients_redone){
+    patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
+  } else {
+    patient_folder <- paste0(date,"/", patient, "_REDO_",xls_unique$Dataset[i])
+  }
+  # patient_folder <- paste0(date,"/", patient, "_",xls_unique$Dataset[i])
   # patient_folder <- paste0(date,"_MSEA_results/", patient, "_",xls_unique$Dataset[i])
   path <- paste0(code_dir,"/../Results/",patient_folder)
   
@@ -134,6 +195,7 @@ for (i in 1:nrow(xls_unique)){
           if(any(dis_gene %in% MSEA_results$metabolite.set)){
             # dis_pos <- min(unlist(lapply(dis_gene, function(x) grep(x, MSEA_results$metabolite.set))))
             dis_pos <- min(unlist(lapply(dis_gene, function(x) grep(paste0("\\b",x,"\\b"), MSEA_results$metabolite.set))))
+            set_size <- MSEA_results[dis_pos, 'mets.in.set']
             
             p.value <- MSEA_results$p.value[dis_pos]
             if(p.value==1){
@@ -145,33 +207,43 @@ for (i in 1:nrow(xls_unique)){
             # dis_pos <- nrow(MSEA_results)
             rank <- nrow(MSEA_results)
             p.value <- 1
+            set_size <- 0
           }
           # dis_pos <- grep(dis_gene, MSEA_results$metabolite.set)
           
           gene_set <- nrow(MSEA_results)
           
-          patient_DT <- data.table(Patient = patient,
-                                   Gene = paste(dis_gene,collapse = ";"),
-                                   Protein_function = prot_func,
-                                   Transporter = is_trans,
-                                   Position = rank,
-                                   Total_genes = gene_set,
-                                   # Rev_Pos_frac = 1-((dis_pos-1)/(gene_set-1)),
-                                   Rev_Pos_frac = 1-((rank-1)/(gene_set-1)),
-                                   # Pos_frac = dis_pos/gene_set,
-                                   Pos_frac = rank/gene_set,
-                                   Z_threshold = threshs,
-                                   Step = step,
-                                   Max_rxn = maxrxn,
-                                   P.value = p.value,
-                                   Seed = seed)
+          # patient_DT <- data.table(Patient = patient,
+          #                          Train_Val_Set = train_val_set,
+          #                          DBS = dbs,
+          #                          Gene = paste(dis_gene,collapse = ";"),
+          #                          Gene_met_set_size = set_size,
+          #                          Protein_function = prot_func,
+          #                          Transporter = is_trans,
+          #                          Position = rank,
+          #                          Total_genes = gene_set,
+          #                          # Rev_Pos_frac = 1-((dis_pos-1)/(gene_set-1)),
+          #                          Rev_Pos_frac = 1-((rank-1)/(gene_set-1)),
+          #                          # Pos_frac = dis_pos/gene_set,
+          #                          Pos_frac = rank/gene_set,
+          #                          Z_threshold = threshs,
+          #                          Step = step,
+          #                          Max_rxn = maxrxn,
+          #                          P.value = p.value,
+          #                          Seed = seed)
           
           ###########################################################################
           # Make datatable of all patients ------------------------------------------
           ###########################################################################
           
-          DT <- rbind(DT, patient_DT)
-          
+          # DT <- rbind(DT, patient_DT)
+          DT[row_nr, c("Patient","Train_Val_Set","DBS", "Gene", "Gene_met_set_size", "Protein_function", "Transporter", 
+                       "Position", "Total_genes", "Rev_Pos_frac", "Pos_frac", "Z_threshold", "Step", "Max_rxn",
+                       "P.value", "Seed") := list(
+                         patient, train_val_set, dbs, paste(dis_gene,collapse = ";"), as.integer(set_size), as.character(prot_func), as.character(is_trans), 
+                         rank, gene_set, 1-((rank-1)/(gene_set-1)), rank/gene_set, threshs, step, maxrxn,
+                         as.double(p.value), seed)]
+          row_nr =+ 1
         }
       }
     }
@@ -184,9 +256,10 @@ DT[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
 DT[, Step:=factor(Step, levels = steps)]
 DT[, Protein_function:=as.factor(Protein_function)]
 
-if(trainingset){
-  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_trainingset.RDS"))
-} else {
-  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_validationset.RDS"))
-}
-
+# if(is.null(trainingset)){
+  saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_all.RDS"))
+# } else if(trainingset){
+#   saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_trainingset.RDS"))
+# } else {
+#   saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_validationset.RDS"))
+# }
