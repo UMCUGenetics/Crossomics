@@ -1,10 +1,10 @@
 performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene_in, thresh_F_pos, thresh_F_neg, path = NULL, top = 20, id="hmdb", patient_folder, plot = TRUE){
 
     # set the dimensions of the pictures for later
-  width=1024
-  height=768
+  # width=1024
+  # height=768
   # Fold Change is put to the power logFC_weight (weighted_logFC = round(abs(log2(foldChange))^logFC_weight))
-  logFC_weight=1.2
+  # logFC_weight=1.2
   
   label <- paste0("av.z_", patient)
   patient_z_values_vector = av_int_and_z_values_matrix[,label]
@@ -20,16 +20,34 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   
   # Get location of the metaboliteSet metabolites in the intensity/Z-scores matrix.
   indices <- NULL
+  index <- NULL
   for(row_num in 1:nrow(metaboliteSet)){
-    res <- lapply(split_names, function(sp_nam) grep(metaboliteSet[row_num,"hmdb"], sp_nam))
+    # res <- lapply(split_names, function(sp_nam) grep(metaboliteSet[row_num,"hmdb"], sp_nam))
+    genes <- trimws(as.vector(unlist(strsplit(metaboliteSet[row_num,"hmdb"], split = ","))))
+    if(length(genes) > 1){
+      for(g in genes){
+        res <- lapply(split_names, function(sp_nam) grep(g, sp_nam))
+        tmp_index <- which(sapply(res, function(x) length(x) > 0))
+        index <- c(index, tmp_index)
+        rm(tmp_index)
+      }
+      index <- unique(index)
+      if(length(index) > 1) stop(paste("duplicate metabolites not duplicate in Z-score dataset for gene:", gene_in))
+    } else {
+      res <- lapply(split_names, function(sp_nam) grep(genes, sp_nam))
+      index <- which(sapply(res, function(x) length(x) > 0))
+    }
+
+    
     
     # which vectors contain a search term
-    index <- which(sapply(res, function(x) length(x) > 0))
+    # index <- which(sapply(res, function(x) length(x) > 0))
     if(length(index) > 0){
       indices <- c(indices, index)
     } else {
       indices <- c(indices, NA)
     }
+    index <- NULL
   }
   
   # Check if there are any metabolites actually present in both the sets and intensity scores
@@ -72,13 +90,13 @@ performMSEA <- function(metaboliteSet, av_int_and_z_values_matrix, patient, gene
   # average of the control intensity values and paste it to the end of the previous matrix
   avg.int.c <- apply(av_int_and_z_values_matrix[,grep("C", colnames(av_int_and_z_values_matrix), fixed = TRUE)], 1, mean)
   av_int_and_z_values_matrix <- cbind(av_int_and_z_values_matrix,"avg.int.controls"=avg.int.c)
-  foldChange = av_int_and_z_values_matrix[,2]/avg.int.c # Dangerous, logFC_weight value of 1 means no change
-  weighted_logFC = round(abs(log2(foldChange))^logFC_weight)
+  # foldChange = av_int_and_z_values_matrix[,2]/avg.int.c # Dangerous, logFC_weight value of 1 means no change
+  # weighted_logFC = round(abs(log2(foldChange))^logFC_weight)
   metsInset=cbind(metsInset, 
                   "names"= metNames, 
                   "hmdb_set"= hmdb_set, 
-                  "weighted_logFC"=weighted_logFC[index],
-                  "FC"=foldChange[index],
+                  # "weighted_logFC"=weighted_logFC[index],
+                  # "FC"=foldChange[index],
                   "z-score"=patient_z_values_vector[rownames(metsInset)], 
                   "path"=paths)
   
