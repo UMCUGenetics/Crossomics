@@ -58,16 +58,16 @@ if(Sys.getenv("RSTUDIO") != "1") {
   library("data.table")
   
   patient_number <- 34
-  # thresholds <- "-1;1.5,-1.5;2,-3;3,-5;5"
-  thresholds <- "-1;1.5"
-  # max_rxns <-"8,10,12,15,17,19"
-  max_rxns <-"19"
+  thresholds <- "-1;1.5,-1.5;2,-3;3,-5;5"
+  # thresholds <- "-1;1.5"
+  max_rxns <-"8,10,12,15,17,19"
+  # max_rxns <-"19"
   max_rxns <- as.numeric(unlist(strsplit(max_rxns, split = ",")))
-  # steps <- "0,1,2,3,4,5"
-  steps <- "3"
+  steps <- "0,1,2,3,4,5"
+  # steps <- "3"
   steps <- as.numeric(unlist(strsplit(steps, split = ",")))
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  seed <- 752
+  seed <- 72563
   outdir <- "Resultstest/"
   mock_date <- "2019-10-22/"
 }
@@ -391,16 +391,20 @@ for (threshold in 1:length(thresh_pos_list)){
                              plot = FALSE
         )
 
-        p_value = as.numeric(retVal$p.value)
+        p_value <- as.numeric(retVal$p.value)
         if (length(p_value)==0){
           p_value=NA
         }
+        mets_exc_thres <- as.numeric(retVal$mets_exc_thres)
+        # if (length(mets_exc_thres)==0){
+        #   mets_exc_thres=NA
+        # }
         
         nMets <- nrow(metaboliteSet)
         metSetResult <- data.frame(rbind(metSetResult, c("metabolite.set"=gene_in, 
                                                          "p.value"=signif(p_value, digits = 5), 
                                                          "mets in set"=nMets, 
-                                                         "mets exc thres"=retVal$mets_exc_thres
+                                                         "mets exc thres"=mets_exc_thres
         )
         ), stringsAsFactors = FALSE)
         
