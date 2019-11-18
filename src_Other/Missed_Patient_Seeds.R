@@ -1,3 +1,7 @@
+library(data.table)
+library(stringr)
+library(rstudioapi)
+
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 
 date <- "2019-11-01"
