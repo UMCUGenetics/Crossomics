@@ -13,6 +13,20 @@
 # data.table  1.12.6
 # tidyr       1.0.0
 
+# ON HPC:
+# R version:  3.6.0 (2019-04-26)
+# Platform:   x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# stringr     1.4.0     
+# dplyr       0.8.3       
+# data.table  1.12.2 
+# tidyr       0.8.3      
+# tidyselect  0.2.5  
+# vctrs       0.2.0       
+# crayon      1.3.4      
+# backports   1.1.4  
+  
+
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -142,6 +156,8 @@ paste.unique <- function(colname){
   }
 }
 
+# To concatenate unique IDs of metabolites in the tibbles
+concat_unique <- function(x){paste(unique(x),  collapse=',')}
 
 
 
@@ -372,10 +388,16 @@ for (threshold in 1:length(thresh_pos_list)){
 
         metaboliteSet <- as_tibble(metaboliteSet)
 
+        # metaboliteSet <- metaboliteSet %>%
+        #   group_by(alt_hmdb) %>%
+        #   summarise_each(funs(paste(unique(.), collapse = ",")))
         metaboliteSet <- metaboliteSet %>%
           group_by(alt_hmdb) %>%
-          summarise_each(funs(paste(unique(.), collapse = ",")))
+          summarise_all(., concat_unique)
+        
         metaboliteSet <- as.matrix(metaboliteSet)
+        
+        
         
         
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
