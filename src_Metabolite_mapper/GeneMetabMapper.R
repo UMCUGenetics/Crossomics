@@ -56,7 +56,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
   library("data.table")
   library("dplyr")
   
-  patient_number <- 34
+  patient_number <- 1
   thresholds <- "-1;1.5,-1.5;2,-3;3,-5;5"
   # thresholds <- "-1;1.5"
   max_rxns <-"8,10,12,15,17,19"
@@ -432,8 +432,6 @@ for (threshold in 1:length(thresh_pos_list)){
       # Collate patient-disease gene data to 1 data table
       Patient_metSetResult <- rbind(Patient_metSetResult, tmp_Patient_metSetResult)
       rm(tmp_Patient_metSetResult)
-      
-      cat("\n\n")
     }
   }
 }
