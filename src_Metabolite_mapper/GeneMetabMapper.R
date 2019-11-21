@@ -2,16 +2,16 @@
 # SessionInfo -------------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# R version:  3.6.0 (2019-04-26)
+# R version:  3.6.1 (2019-07-05)
 # platform:   x86_64-apple-darwin15.6.0 (64-bit)
 # OS:         macOS Mojave 10.14.6
 # 
 # libraries:
 # tidyr       0.8.3
 # rstudioapi  0.10
-# Cairo       1.5-10
 # stringr     1.4.0
-# data.table  1.12.2
+# data.table  1.12.6
+# tidyr       1.0.0
 
 
 
@@ -40,7 +40,6 @@ if(Sys.getenv("RSTUDIO") != "1") {
   # R_location <- "/hpc/local/CentOS7/dbg_mz/R_libs/3.6.0/lib64" 
   
   suppressMessages(library("stringr",lib.loc = R_location)) # string manipulation, add leading 0's
-  # suppressMessages(library("Cairo",lib.loc = R_location))
   suppressMessages(library("backports",lib.loc = R_location))
   suppressMessages(library("crayon",lib.loc = R_location))
   suppressMessages(library("vctrs",lib.loc = R_location))
@@ -52,10 +51,10 @@ if(Sys.getenv("RSTUDIO") != "1") {
   
 } else {
   library("stringr") # string manipulation, add leading 0's
-  # library("Cairo")
   library("rstudioapi")
   library("tidyr")
   library("data.table")
+  library("dplyr")
   
   patient_number <- 34
   thresholds <- "-1;1.5,-1.5;2,-3;3,-5;5"
@@ -72,10 +71,8 @@ if(Sys.getenv("RSTUDIO") != "1") {
   mock_date <- "2019-10-22/"
 }
 
-# top <- 20
-# id <- "hmdb"
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-11-01" # The date of this run 
+date_run <- "2019-11-21" # The date of this run 
 
 nr_mocks <- 200
 
@@ -152,13 +149,10 @@ paste.unique <- function(colname){
 # Load data ---------------------------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# setwd(paste0(code_dir,"/../"))
-
 source(paste0(code_dir,"/Supportive/sourceDir.R"))
 sourceDir(paste0(code_dir,"/Supportive"), trace = FALSE)
 
 
-# load(paste0("Data/", train_data_name))
 load(paste0(code_dir,"/../Data/", train_data_name))
 
 # Load mock gene set
@@ -173,6 +167,7 @@ if(sum(colnames(xls_data) == "Patient number in set" | colnames(xls_data) == "Pa
 xls_data$Patient.number <- sapply(strsplit(xls_data$Old.patient.number,"[P.]"), function(x)
   paste0("P", sprintf("%03d",as.numeric(x[2])), ".", x[3])
 )
+
 xls_data$Patient <- sapply(strsplit(xls_data$Old.patient.number,"[P.]"), function(x)
   paste0("P", sprintf("%03d",as.numeric(x[2])))
 )
@@ -372,12 +367,9 @@ for (threshold in 1:length(thresh_pos_list)){
         }
         
         
-        # Some piece of code about removing metabolites that are indistinguishable from one another
-        # metaboliteSet[,"alt_hmdb"] <- unlist(lapply(metaboliteSet[,"hmdb"], function(x) grep(x, rownames(Zint_pruned), value = TRUE)))
+        # Collate rows that have indistinguishable metabolites
         metaboliteSet <- cbind(metaboliteSet, "alt_hmdb" = unlist(lapply(metaboliteSet[,"hmdb"], function(x) grep(x, rownames(Zint_pruned), value = TRUE))))
 
-
-        library(dplyr)
         metaboliteSet <- as_tibble(metaboliteSet)
 
         metaboliteSet <- metaboliteSet %>%
@@ -390,17 +382,6 @@ for (threshold in 1:length(thresh_pos_list)){
         # Perform MSEA ------------------------------------------------------------
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         
-        # retVal = performMSEA(metaboliteSet = metaboliteSet, 
-        #                      av_int_and_z_values_matrix = av_Z_scores,
-        #                      patient = patient, 
-        #                      gene_in, 
-        #                      thresh_F_pos, 
-        #                      thresh_F_neg, 
-        #                      path = paste0(code_dir,"/../", outdir), 
-        #                      top, 
-        #                      id, 
-        #                      plot = FALSE
-        # )
         retVal = performMSEA(metaboliteSet = metaboliteSet, 
                              patient_z_values = av_Z_scores,
                              thresh_F_pos, 
@@ -413,9 +394,6 @@ for (threshold in 1:length(thresh_pos_list)){
           p_value=NA
         }
         mets_exc_thres <- as.numeric(retVal$mets_exc_thres)
-        # if (length(mets_exc_thres)==0){
-        #   mets_exc_thres=NA
-        # }
         
         nMets <- nrow(metaboliteSet)
         metSetResult <- data.frame(rbind(metSetResult, c("metabolite.set"=gene_in, 
