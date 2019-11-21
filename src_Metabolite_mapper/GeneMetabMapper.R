@@ -80,7 +80,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
   # steps <- "5"
   steps <- as.numeric(unlist(strsplit(steps, split = ",")))
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  seed <- 72563
+  seed <- 10262
   outdir <- "Resultstest/"
   mock_date <- "2019-10-22/"
 }
@@ -345,7 +345,7 @@ for (threshold in 1:length(thresh_pos_list)){
         }
         
         #take only (somewhat) interesting columns and remove the rest
-        metaboliteSet <- metaboliteSet[,c("rxn_id", "step","met_long","hmdb","kegg","chebi","pubchem")]
+        metaboliteSet <- metaboliteSet[,c("rxn_id", "step","met_long","hmdb","kegg","chebi","pubchem"), drop = FALSE]
         
         gene_in <- strsplit(mss[j], split = "\\.")[[1]][1]
         
@@ -358,6 +358,7 @@ for (threshold in 1:length(thresh_pos_list)){
         
         # Remove any metabolites that are non-informative
         for(identifier in c("chebi","kegg","pubchem")){
+          # cat("patient:", i, "pars:",threshold,step,maxrxn,seed, "gene_in:", gene_in, "identifier:", identifier, "\n")
           metaboliteSet <- removeMets(metaboliteSet, mets2remove, identifier)
         }
         
