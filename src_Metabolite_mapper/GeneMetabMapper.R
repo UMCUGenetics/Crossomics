@@ -64,7 +64,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
   # max_rxns <-"19"
   max_rxns <- as.numeric(unlist(strsplit(max_rxns, split = ",")))
   steps <- "0,1,2,3,4,5"
-  # steps <- "3"
+  # steps <- "5"
   steps <- as.numeric(unlist(strsplit(steps, split = ",")))
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
   seed <- 72563
@@ -72,8 +72,8 @@ if(Sys.getenv("RSTUDIO") != "1") {
   mock_date <- "2019-10-22/"
 }
 
-top <- 20
-id <- "hmdb"
+# top <- 20
+# id <- "hmdb"
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
 date_run <- "2019-11-01" # The date of this run 
 
@@ -209,6 +209,8 @@ dataset <- tmp[1]
 patient <- tmp[2]
 rm(tmp)
 
+cat("start patient:", patient, "dataset:", dataset, "\n")
+
 # Get disease gene for patient
 dis_gene <- xls_data$Gene[grepl(patient, xls_data$Patient.number) & xls_data$Dataset == dataset][1]
 
@@ -300,7 +302,7 @@ for (threshold in 1:length(thresh_pos_list)){
     
     for (maxrxn in max_rxns){
       # for (maxrxn in c(max_rxns[5],max_rxns[6])){
-      cat("Z-value threshold:", thresh_F_neg,"/", thresh_F_pos, "Max rxn:", maxrxn, "step:", step, "\n")
+      # cat("Z-value threshold:", thresh_F_neg,"/", thresh_F_pos, "Max rxn:", maxrxn, "step:", step, "\n")
       
       if (date_input >= "2019-08-12"){
         indir <- paste0(code_dir,"/../Data/",date_input,"/maxrxn",maxrxn,"/mss_", step,"_HMDBtranslated")
@@ -323,8 +325,6 @@ for (threshold in 1:length(thresh_pos_list)){
           metaboliteSet <- as.matrix(readRDS(paste(indir, mss[j], sep="/")))
         }
         
-        gene_in <- strsplit(mss[j], split = "\\.")[[1]][1]
-        
         # for when a single metabolite is present (it is possibly converted to a character vector)
         if(is.vector(metaboliteSet)) {
           dimnames <- names(metaboliteSet)
@@ -333,7 +333,12 @@ for (threshold in 1:length(thresh_pos_list)){
           rm(dimnames)
         }
         
+        #take only (somewhat) interesting columns and remove the rest
+        metaboliteSet <- metaboliteSet[,c("rxn_id", "step","met_long","hmdb","kegg","chebi","pubchem")]
         
+        gene_in <- strsplit(mss[j], split = "\\.")[[1]][1]
+        
+
         
         
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -355,15 +360,9 @@ for (threshold in 1:length(thresh_pos_list)){
         if (length(index)>0) metaboliteSet <- metaboliteSet[-index,,drop=FALSE]
         if (nrow(metaboliteSet) == 0) next
         
-        # Remove duplicate metabolites, but collate their data if they are known under different ID's/names
+        # Remove duplicate metabolites
         if(nrow(metaboliteSet) >1){
           tmp <- as.data.frame(metaboliteSet[apply(apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, real_duplicated), 1, any),])
-          setDT(tmp)
-          tmp <- make.data.table(tmp, "hmdb")
-          tmp <- make.data.table(tmp, "chebi")
-          metaboliteSet <- metaboliteSet[apply(!apply(metaboliteSet[,c("hmdb","chebi","kegg")], 2, real_duplicated), 1, all),]
-          metaboliteSet <- rbind(metaboliteSet, as.matrix(tmp[,-1]))
-          rm(tmp)
         }
         
         # Manual fix for the metabolites known under "HMDB0012482, HMDB0002281" (same, but different in the hmdb dataset)
@@ -373,23 +372,41 @@ for (threshold in 1:length(thresh_pos_list)){
         }
         
         
+        # Some piece of code about removing metabolites that are indistinguishable from one another
+        # metaboliteSet[,"alt_hmdb"] <- unlist(lapply(metaboliteSet[,"hmdb"], function(x) grep(x, rownames(Zint_pruned), value = TRUE)))
+        metaboliteSet <- cbind(metaboliteSet, "alt_hmdb" = unlist(lapply(metaboliteSet[,"hmdb"], function(x) grep(x, rownames(Zint_pruned), value = TRUE))))
+
+
+        library(dplyr)
+        metaboliteSet <- as_tibble(metaboliteSet)
+
+        metaboliteSet <- metaboliteSet %>%
+          group_by(alt_hmdb) %>%
+          summarise_each(funs(paste(unique(.), collapse = ",")))
+        metaboliteSet <- as.matrix(metaboliteSet)
         
         
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         # Perform MSEA ------------------------------------------------------------
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         
+        # retVal = performMSEA(metaboliteSet = metaboliteSet, 
+        #                      av_int_and_z_values_matrix = av_Z_scores,
+        #                      patient = patient, 
+        #                      gene_in, 
+        #                      thresh_F_pos, 
+        #                      thresh_F_neg, 
+        #                      path = paste0(code_dir,"/../", outdir), 
+        #                      top, 
+        #                      id, 
+        #                      plot = FALSE
+        # )
         retVal = performMSEA(metaboliteSet = metaboliteSet, 
-                             av_int_and_z_values_matrix = av_Z_scores,
-                             patient = patient, 
-                             gene_in, 
+                             patient_z_values = av_Z_scores,
                              thresh_F_pos, 
-                             thresh_F_neg, 
-                             path = paste0(code_dir,"/../", outdir), 
-                             top, 
-                             id, 
-                             plot = FALSE
+                             thresh_F_neg
         )
+        
 
         p_value <- as.numeric(retVal$p.value)
         if (length(p_value)==0){
