@@ -430,6 +430,9 @@ for (threshold in 1:length(thresh_pos_list)){
       
       metSetResult <- metSetResult[order(as.numeric(metSetResult[,"p.value"])),]
       
+      # Note the top 5 genes with their info:
+      top5 <- paste(as.vector(apply(metSetResult[c(1:5),c(1,2)], 1, paste, collapse = ";")), collapse = ",")
+      
       # Add any disease genes to the results that were completely missed 
       for(gene in dis_gene){
         tmp_index <- which(metSetResult$metabolite.set == gene)
@@ -447,7 +450,8 @@ for (threshold in 1:length(thresh_pos_list)){
       tmp_Patient_metSetResult <- as.data.table(cbind(metSetResult[rank_dis_genes,],
                                                       "Position" = rank_dis_genes,
                                                       "Last_position" = total_genes,
-                                                      "DBS" = length(DBS)))
+                                                      "DBS" = length(DBS),
+                                                      "Top5_Gene_P.val" = top5))
       tmp_Patient_metSetResult[, c("Z_threshold","Step","Max_rxn","Seed","PatientID") := list(
         threshs, step, maxrxn, seed, paste(dataset, patient, sep = "^")
       )]
