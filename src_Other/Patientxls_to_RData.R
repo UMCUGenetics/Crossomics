@@ -26,7 +26,8 @@ library(taRifx) # to remove factors
 # Manual changes ----------------------------------------------------------
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 date_of_metsets <- "2019-08-12"
-name_patient_data <- "Crossomics_DBS_Marten_Training_Validation_updated20190923"
+name_patient_data <- "Crossomics_DBS_Marten_Training_Validation_updated20191125"
+name_new_patient_data <- "Crossomics_DBS_Marten_TraVal_Inclusion_only_updated20191125"
 
 
 
@@ -37,7 +38,10 @@ xls_df <- xls_df[,colSums(is.na(xls_df))<nrow(xls_df)]
 xls_DT <- data.table(xls_df)
 xls_data <- xls_DT
 xls_data <- taRifx::remove.factors(xls_data)
-save(file = paste0(path_of_xls,name_patient_data,"test.RData"), xls_data)
+xls_data <- xls_data[ !grepl("Exclusion", Judith) & Gene != "NA" ]
+
+save(file = paste0(path_of_xls,name_new_patient_data,".RData"), xls_data)
+
 
 
 ##### Check disease genes and print which ones don't have a metabolite set
