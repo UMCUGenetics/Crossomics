@@ -1,5 +1,7 @@
 # Convert xlsx bioinformatics file to RDS
 
+library(openxlsx)
+
 # Go to any directory where the xlsx file is (only 1 xlsx file should be present) and run the whole thing
 setwd("/Users/mkerkho7/DIMS2_repo/Crossomics/Data/Project 2017_008 MetabolomicsDiagnosis_DBS/RES_DBS_20170420_MetabolomicsDiagnosis_RUN2/Bioinformatics_metIS/")
 
