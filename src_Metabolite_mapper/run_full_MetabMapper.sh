@@ -18,6 +18,6 @@ do
 
     echo "queued $seed_file"
 
-    qsub -l h_rt=00:40:00 -l h_vmem=0.5G -N Crossomics_MetabMapper -t 1-112 -o /home/cog/$USER/Crossomics_HPC/logs -e /home/cog/$USER/Crossomics_HPC/logs -m a -M "m.h.p.kerkhofs-7@umcutrecht.nl" $code_dir/run_R.sh $thresholds $maxrxns $steps $code_dir $seed_file $R_location
+    qsub -l h_rt=00:30:00 -l h_vmem=0.5G -N Crossomics_MetabMapper -t 1-112 -o /home/cog/$USER/Crossomics_HPC/logs -e /home/cog/$USER/Crossomics_HPC/logs -m a -M "m.h.p.kerkhofs-7@umcutrecht.nl" $code_dir/run_R.sh $thresholds $maxrxns $steps $code_dir $seed_file $R_location
 
 done
