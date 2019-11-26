@@ -10,3 +10,5 @@ seed_file=$5
 R_location=$6
 
 $R_location/Rscript $code_dir/GeneMetabMapper.R $patient_number $thresholds $maxrxns $steps $code_dir $seed_file $R_location
+
+rm -f ./core.*
