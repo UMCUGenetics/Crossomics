@@ -26,8 +26,8 @@ library(taRifx) # to remove factors
 # Manual changes ----------------------------------------------------------
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 date_of_metsets <- "2019-08-12"
-name_patient_data <- "Crossomics_DBS_Marten_Training_Validation_updated20191125"
-name_new_patient_data <- "Crossomics_DBS_Marten_TraVal_Inclusion_only_updated20191125"
+name_patient_data <- "Crossomics_DBS_Marten_Training_Validation_updated20191128"
+name_new_patient_data <- "Crossomics_DBS_Marten_TraVal_updated20191128"
 
 
 
@@ -38,7 +38,37 @@ xls_df <- xls_df[,colSums(is.na(xls_df))<nrow(xls_df)]
 xls_DT <- data.table(xls_df)
 xls_data <- xls_DT
 xls_data <- taRifx::remove.factors(xls_data)
-xls_data <- xls_data[ !grepl("Exclusion", Judith) & Gene != "NA" ]
+# xls_data <- xls_data[ !grepl("Exclusion", Judith) & Gene != "NA" ]
+
+if(sum(colnames(xls_data) == "Patient number in set" | colnames(xls_data) == "Patient.number.in.set") > 0){
+  colnames(xls_data)[colnames(xls_data) == "Patient number in set"] <- "Old.patient.number"
+  colnames(xls_data)[colnames(xls_data) == "Patient.number.in.set"] <- "Old.patient.number"
+  colnames(xls_data)[colnames(xls_data) == "Patient number in set.Iden"] <- "Old.patient.number.Iden"
+  colnames(xls_data)[colnames(xls_data) == "Patient.number.in.set.Iden"] <- "Old.patient.number.Iden"
+}
+
+
+
+xls_data$Patient.number <- sapply(strsplit(xls_data$Old.patient.number,"[P.]"), function(x)
+  paste0("P", sprintf("%03d",as.numeric(x[2])), ".", x[3])
+)
+
+xls_data$Patient.number.Iden <- sapply(strsplit(xls_data$Old.patient.number.Iden,"[P.]"), function(x)
+  paste0("P", sprintf("%03d",as.numeric(x[2])), ".", x[3])
+)
+xls_data[Patient.number.Iden == "P0NA.NA", Patient.number.Iden := NA] 
+
+xls_data$Patient <- sapply(strsplit(xls_data$Old.patient.number,"[P.]"), function(x)
+  paste0("P", sprintf("%03d",as.numeric(x[2])))
+)
+xls_data$Patient.Iden <- sapply(strsplit(xls_data$Old.patient.number.Iden,"[P.]"), function(x)
+  paste0("P", sprintf("%03d",as.numeric(x[2])))
+)
+xls_data[Patient.Iden == "P0NA", Patient.Iden := NA]
+
+xls_data$PatientID <- paste(xls_data$Dataset, xls_data$Patient, sep = "^")
+xls_data$PatientID.Iden <- paste(xls_data$Dataset.Iden, xls_data$Patient.Iden, sep = "^")
+xls_data[PatientID.Iden == "NA^NA", PatientID.Iden := NA]
 
 save(file = paste0(path_of_xls,name_new_patient_data,".RData"), xls_data)
 
