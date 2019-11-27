@@ -86,7 +86,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
 }
 
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-11-26" # The date of this run 
+date_run <- "2019-11-28" # The date of this run 
 
 nr_mocks <- 200
 
@@ -108,7 +108,7 @@ thresh_pos_list <- as.numeric(thresh_df[2,])
 # HMDB0002467 <- determined to be non-bodily substances, but created in the lab
 bad_mets <- c("HMDB0002467")
 
-train_data_name <- "Crossomics_DBS_Marten_TraVal_Inclusion_only_updated20191126test.RData"
+train_data_name <- "Crossomics_DBS_Marten_TraVal_updated20191128.RData"
 
 redo <- NULL #(null or "_REDO")
 
