@@ -70,7 +70,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
   library("data.table")
   library("dplyr")
   
-  patient_number <- 1
+  patient_number <- 4
   thresholds <- "-1;1.5,-1.5;2,-3;3,-5;5"
   # thresholds <- "-1;1.5"
   max_rxns <-"8,10,12,15,17,19"
@@ -86,7 +86,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
 }
 
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-11-21" # The date of this run 
+date_run <- "2019-11-26" # The date of this run 
 
 nr_mocks <- 200
 
@@ -108,7 +108,7 @@ thresh_pos_list <- as.numeric(thresh_df[2,])
 # HMDB0002467 <- determined to be non-bodily substances, but created in the lab
 bad_mets <- c("HMDB0002467")
 
-train_data_name <- "Crossomics_DBS_Marten_TraVal_Inclusion_only_updated20191031.RData"
+train_data_name <- "Crossomics_DBS_Marten_TraVal_Inclusion_only_updated20191126test.RData"
 
 redo <- NULL #(null or "_REDO")
 
@@ -173,30 +173,41 @@ load(paste0(code_dir,"/../Data/", train_data_name))
 
 # Load mock gene set
 mss <- read.table(paste0(code_dir,"/../Results/Mock_genes/",mock_date,"mock_genes",nr_mocks,"_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
-
-# correct naming of new training set to old format
-if(sum(colnames(xls_data) == "Patient number in set" | colnames(xls_data) == "Patient.number.in.set") > 0){
-  colnames(xls_data)[colnames(xls_data) == "Patient number in set"] <- "Old.patient.number"
-  colnames(xls_data)[colnames(xls_data) == "Patient.number.in.set"] <- "Old.patient.number"
-}
-
-xls_data$Patient.number <- sapply(strsplit(xls_data$Old.patient.number,"[P.]"), function(x)
-  paste0("P", sprintf("%03d",as.numeric(x[2])), ".", x[3])
-)
-
-xls_data$Patient <- sapply(strsplit(xls_data$Old.patient.number,"[P.]"), function(x)
-  paste0("P", sprintf("%03d",as.numeric(x[2])))
-)
-
-
-# Load patient subset
-if (!Subset_Of_Patients){
-  xls_data$PatientIDs <- paste(xls_data$Dataset, xls_data$Patient, sep = "^")
-  uni_dat_pat <- unique(xls_data$PatientIDs)
-} else {
-  uni_dat_pat <- read.table(paste0(code_dir,"/../Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
-}
-
+# 
+# # correct naming of new training set to old format
+# if(sum(colnames(xls_data) == "Patient number in set" | colnames(xls_data) == "Patient.number.in.set") > 0){
+#   colnames(xls_data)[colnames(xls_data) == "Patient number in set"] <- "Old.patient.number"
+#   colnames(xls_data)[colnames(xls_data) == "Patient.number.in.set"] <- "Old.patient.number"
+#   colnames(xls_data)[colnames(xls_data) == "Patient number in set.Iden"] <- "Old.patient.number.Iden"
+#   colnames(xls_data)[colnames(xls_data) == "Patient.number.in.set.Iden"] <- "Old.patient.number.Iden"
+# }
+# 
+# xls_data$Patient.number <- sapply(strsplit(xls_data$Old.patient.number,"[P.]"), function(x)
+#   paste0("P", sprintf("%03d",as.numeric(x[2])), ".", x[3])
+# )
+# xls_data$Patient.number.Iden <- sapply(strsplit(xls_data$Old.patient.number.Iden,"[P.]"), function(x)
+#   paste0("P", sprintf("%03d",as.numeric(x[2])), ".", x[3])
+# )
+# 
+# xls_data$Patient <- sapply(strsplit(xls_data$Old.patient.number,"[P.]"), function(x)
+#   paste0("P", sprintf("%03d",as.numeric(x[2])))
+# )
+# xls_data$Patient.Iden <- sapply(strsplit(xls_data$Old.patient.number.Iden,"[P.]"), function(x)
+#   paste0("P", sprintf("%03d",as.numeric(x[2])))
+# )
+# 
+# 
+# # Load patient subset
+# if (!Subset_Of_Patients){
+#   xls_data$PatientID <- paste(xls_data$Dataset, xls_data$Patient, sep = "^")
+#   # xls_data$PatientID.Iden <- paste(xls_data$Dataset.Iden, xls_data$Patient.Iden, sep = "^")
+#   uni_dat_pat <- unique(xls_data$PatientID)
+#   # uni_dat_pat <- unique(na.omit(c(xls_data$PatientID, xls_data$PatientID.Iden)))
+# } else {
+#   uni_dat_pat <- read.table(paste0(code_dir,"/../Results/",date_input,"/patient_subset_seed",seed,".txt"), stringsAsFactors = FALSE)[,1]
+# }
+uni_dat_pat <- unique(xls_data$PatientID)
+# uni_dat_pat <- unique(na.omit(c(xls_data$PatientID, xls_data$PatientID.Iden)))
 
 # Set which metabolites to remove
 mets2remove <- as.data.frame(readRDS(paste0(code_dir,"/../Data/mets2remove.RDS")))
@@ -210,6 +221,10 @@ mets2remove <- as.data.frame(readRDS(paste0(code_dir,"/../Data/mets2remove.RDS")
 
 i <- uni_dat_pat[patient_number]
 
+# Find out whether patient is known under multiple IDs 
+ident_pat <- unique(na.omit(xls_data[grep(i, xls_data$PatientID, fixed = TRUE), PatientID.Iden]))
+is_id_pat <- length(ident_pat) > 0
+
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Get patient and dataset -------------------------------------------------
@@ -218,9 +233,27 @@ i <- uni_dat_pat[patient_number]
 tmp <- unlist(strsplit(i, split = "\\^"))
 dataset <- tmp[1]
 patient <- tmp[2]
+pID <- paste(patient, dataset, sep = "^")
 rm(tmp)
 
-cat("start patient:", patient, "dataset:", dataset, "\n")
+if(is_id_pat){
+  tmp <- unlist(strsplit(ident_pat, split = "\\^"))
+  dataset.Iden <- tmp[1]
+  patient.Iden <- tmp[2]
+  rm(tmp)
+  comp_patient <- paste(patient, patient.Iden, sep = ";")
+  comp_dataset <- paste(dataset, dataset.Iden, sep = ";")
+  pID.Iden <- paste(patient.Iden, dataset.Iden, sep = "^")
+  patientID <- paste(pID, pID.Iden, sep = ";")
+} else {
+  comp_patient <- patient
+  comp_dataset <- dataset
+  patientID <- pID
+}
+
+
+
+cat("start patient:", comp_patient, "dataset:", comp_dataset, "\n")
 
 # Get disease gene for patient
 dis_gene <- xls_data$Gene[grepl(patient, xls_data$Patient.number) & xls_data$Dataset == dataset][1]
@@ -233,11 +266,13 @@ if(grepl("[;,]+", dis_gene)) {
 # Fix name for MUT / MMUT gene to pathwaycommons version
 dis_gene <- gsub(pattern = "^MUT$", replacement = "MMUT", x = dis_gene)
 
-
-
 data_location <- xls_data$Location[match(dataset, xls_data$Dataset)]
 data_location <- paste(code_dir,"../Data", paste(strsplit(data_location, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")
 
+if(is_id_pat){
+  data_location.Iden <- xls_data$Location.Iden[match(dataset.Iden, xls_data$Dataset.Iden)]
+  data_location.Iden <- paste(code_dir,"../Data", paste(strsplit(data_location.Iden, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")
+}
 
 
 
@@ -245,40 +280,60 @@ data_location <- paste(code_dir,"../Data", paste(strsplit(data_location, split =
 # Obtain metabolite Z scores ----------------------------------------------
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-old_patient_number <- sub(xls_data[grep(i, xls_data$PatientIDs, fixed = TRUE)[1], Old.patient.number], pattern = "\\..*", replacement = "")
+# old_patient_number <- sub(xls_data[grep(i, xls_data$PatientID, fixed = TRUE)[1], Old.patient.number], pattern = "\\..*", replacement = "")
+# 
+# RDS_file <- list.files(path = data_location, pattern = "*.RDS")
+# Zint_values <- readRDS(file = paste(data_location, RDS_file, sep = "/"))
+# Zint_values <- as.data.table(Zint_values)
+# Zint_values[nchar(HMDB_code) == 9, HMDB_code := str_replace(HMDB_code, pattern = "HMDB", replacement = "HMDB00")]
+# 
+# # Remove any metabolites that (for some reason) should not be present
+# Zint_values <- Zint_values[!HMDB_code %in% bad_mets]
+# 
+# # Collate indistinguishable metabolites
+# columns_to_compare <- grep("[PC][0-9]+\\.[0-9]", colnames(Zint_values), value = TRUE)
+# tmp <- as.data.frame(apply(Zint_values[,..columns_to_compare], 1, paste, collapse = ","), stringsAsFactors = FALSE)
+# rownames(tmp) <- Zint_values$HMDB_code
+# colnames(tmp) <- "values"
+# tmp <- aggregate(rownames(tmp), by=tmp['values'], paste, collapse = ",")
+# rownames(tmp) <- tmp$x
+# tmp$x <- NULL
+# tmp <- tidyr::separate(tmp, values, into = columns_to_compare, sep = ",", convert = TRUE)
+# Zint_pruned <- as.matrix(tmp[order(rownames(tmp)),])
+# rm(tmp)
+# 
+# #  Get patient specific columns and average Z-scores if #DBS > 1
+# DBS <- xls_data[tolower(PatientID) == tolower(i), Old.patient.number]
+# 
+# # The identical patients data should come together here again and be represented in the number of DBS
+# 
+# 
+# if(length(DBS) == 1){
+#   av_Z_scores <- Zint_pruned[,grep(paste0(DBS,"_Zscore"), colnames(Zint_pruned)), drop = FALSE]
+# } else {
+#   Z_cols <- unlist(lapply(paste0(DBS,"_Zscore"), function(x) grep(x, colnames(Zint_pruned))))
+#   av_Z_scores <- as.matrix(rowMeans(Zint_pruned[,Z_cols]))
+#   rm(Z_cols)
+# }
+# colnames(av_Z_scores) <- paste0("av.z_", patient)
 
-RDS_file <- list.files(path = data_location, pattern = "*.RDS")
-Zint_values <- readRDS(file = paste(data_location, RDS_file, sep = "/"))
-Zint_values <- as.data.table(Zint_values)
-Zint_values[nchar(HMDB_code) == 9, HMDB_code := str_replace(HMDB_code, pattern = "HMDB", replacement = "HMDB00")]
-
-# Remove any metabolites that (for some reason) should not be present
-Zint_values <- Zint_values[!HMDB_code %in% bad_mets]
-
-# Collate indistinguishable metabolites
-columns_to_compare <- grep("[PC][0-9]+\\.[0-9]", colnames(Zint_values), value = TRUE)
-tmp <- as.data.frame(apply(Zint_values[,..columns_to_compare], 1, paste, collapse = ","), stringsAsFactors = FALSE)
-rownames(tmp) <- Zint_values$HMDB_code
-colnames(tmp) <- "values"
-tmp <- aggregate(rownames(tmp), by=tmp['values'], paste, collapse = ",")
-rownames(tmp) <- tmp$x
-tmp$x <- NULL
-tmp <- tidyr::separate(tmp, values, into = columns_to_compare, sep = ",", convert = TRUE)
-Zint_pruned <- as.matrix(tmp[order(rownames(tmp)),])
-rm(tmp)
-
-#  Get patient specific columns and average Z-scores if #DBS > 1
-DBS <- xls_data[tolower(PatientIDs) == tolower(i), Old.patient.number]
-
-if(length(DBS) == 1){
-  av_Z_scores <- Zint_pruned[,grep(paste0(DBS,"_Zscore"), colnames(Zint_pruned)), drop = FALSE]
+z_mat <- get_Z_score_matrix(xls_data, patientID = i, data_location, bad_mets)
+if(is_id_pat){
+  tmp_mat <- get_Z_score_matrix(xls_data, patientID = ident_pat, data_location.Iden, bad_mets)
+  z_val_df <- merge(z_mat, tmp_mat, by.x = 0, by.y = 0, all = TRUE)
+  rownames(z_val_df) <- z_val_df$Row.names
+  z_val_df$Row.names <- NULL
 } else {
-  Z_cols <- unlist(lapply(paste0(DBS,"_Zscore"), function(x) grep(x, colnames(Zint_pruned))))
-  av_Z_scores <- as.matrix(rowMeans(Zint_pruned[,Z_cols]))
-  rm(Z_cols)
+  z_val_df <- data.frame(z_mat)
 }
-colnames(av_Z_scores) <- paste0("av.z_", patient)
 
+DBS <- ncol(z_val_df)
+
+# Exclude all Internal Standard 'metabolites'
+z_val_df <- z_val_df[!grepl("HMDB[1-2]?[0-9]00000$", rownames(z_val_df)), ]
+
+av_Z_scores <- as.matrix(rowMeans(z_val_df, na.rm = TRUE))
+colnames(av_Z_scores) <- paste0("av.z_", comp_patient)
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -368,7 +423,8 @@ for (threshold in 1:length(thresh_pos_list)){
         if (nrow(metaboliteSet) == 0) next
         
         # Or that do not appear in the dataset
-        index <- which(!as.vector(unlist(lapply(metaboliteSet[,"hmdb"], function(x) length(grep(x, rownames(Zint_pruned))) > 0))))
+        # index <- which(!as.vector(unlist(lapply(metaboliteSet[,"hmdb"], function(x) length(grep(x, rownames(Zint_pruned))) > 0))))
+        index <- which(!as.vector(unlist(lapply(metaboliteSet[,"hmdb"], function(x) length(grep(x, rownames(av_Z_scores))) > 0))))
         if (length(index)>0) metaboliteSet <- metaboliteSet[-index,,drop=FALSE]
         if (nrow(metaboliteSet) == 0) next
         
@@ -385,7 +441,8 @@ for (threshold in 1:length(thresh_pos_list)){
         
         
         # Collate rows that have indistinguishable metabolites
-        metaboliteSet <- cbind(metaboliteSet, "alt_hmdb" = unlist(lapply(metaboliteSet[,"hmdb"], function(x) grep(x, rownames(Zint_pruned), value = TRUE))))
+        # metaboliteSet <- cbind(metaboliteSet, "alt_hmdb" = unlist(lapply(metaboliteSet[,"hmdb"], function(x) grep(x, rownames(Zint_pruned), value = TRUE))))
+        metaboliteSet <- cbind(metaboliteSet, "alt_hmdb" = unlist(lapply(metaboliteSet[,"hmdb"], function(x) grep(x, rownames(av_Z_scores), value = TRUE))))
 
         metaboliteSet <- as_tibble(metaboliteSet)
 
@@ -453,8 +510,9 @@ for (threshold in 1:length(thresh_pos_list)){
                                                       "DBS" = length(DBS),
                                                       "Top5_Gene_P.val" = top5))
       tmp_Patient_metSetResult[, c("Z_threshold","Step","Max_rxn","Seed","PatientID") := list(
-        threshs, step, maxrxn, seed, paste(dataset, patient, sep = "^")
+        threshs, step, maxrxn, seed, patientID
       )]
+      
       
       # Collate patient-disease gene data to 1 data table
       Patient_metSetResult <- rbind(Patient_metSetResult, tmp_Patient_metSetResult)
@@ -465,8 +523,13 @@ for (threshold in 1:length(thresh_pos_list)){
 
 # Save patient and seed specific disease gene data to 1 file
 names(Patient_metSetResult)[1:4] <- c("Gene", "P.value", "Mets_in_set", "Mets_exc_thresh")
-dir.create(paste0(code_dir,"/../", outdir, date_run,"/", patient, redo,"_", dataset,"/seed",seed),recursive = TRUE, showWarnings = FALSE)
-save(Patient_metSetResult, file = paste0(code_dir,"/../", outdir, date_run,"/", patient, redo,"_", dataset,"/seed",seed, "/MSEA_results.RData"))
+# dir.create(paste0(code_dir,"/../", outdir, date_run,"/", comp_patient, redo,"_", comp_dataset,"/seed",seed),recursive = TRUE, showWarnings = FALSE)
+# save(Patient_metSetResult, file = paste0(code_dir,"/../", outdir, date_run,"/", comp_patient, redo,"_", comp_dataset,"/seed",seed, "/MSEA_results.RData"))
+filename <- paste0(code_dir,"/../", outdir, date_run,"/", patientID,"/seed",seed)
+filename <- str_replace_all(filename, pattern = "\\^", "_")
+dir.create(filename, recursive = TRUE, showWarnings = FALSE)
+save(Patient_metSetResult, file = paste0(filename,"/MSEA_results.RData"))
+
 
 
 
