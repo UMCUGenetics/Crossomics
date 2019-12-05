@@ -27,7 +27,7 @@ library(taRifx) # to remove factors
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 date_of_metsets <- "2019-08-12"
 name_patient_data <- "Crossomics_DBS_Marten_trimmed20191204"
-name_new_patient_data <- "Crossomics_DBS_Marten_trimmed20191204"
+name_new_patient_data <- "Crossomics_DBS_Marten_trimmed20191205"
 
 
 
@@ -47,8 +47,8 @@ fix_patient_number <- function(xls_data, old_patient_column, DBS = TRUE){
   }
   return(tmp)
 }
-get_PatientID <- function(xls_data, column1, column2){
-  patientID <- paste(xls_data[,column1], xls_data[,column2], sep = "^")
+get_PatientID <- function(xls_data, column1, column2, seperator = "^"){
+  patientID <- paste(xls_data[,column1], xls_data[,column2], sep = seperator)
   return(patientID)
 }
 
@@ -103,6 +103,11 @@ xls_data$PatientID.Iden3 <- get_PatientID(xls_data, "Dataset.Iden3", "Patient.Id
 
 xls_data[xls_data == "NA^NA"] <- NA
 
+file_patientIDs <- paste(get_PatientID(xls_data, "Patient", "Dataset", "_"), 
+                         get_PatientID(xls_data, "Patient.Iden", "Dataset.Iden", "_"),
+                         get_PatientID(xls_data, "Patient.Iden2", "Dataset.Iden2", "_"),
+                         get_PatientID(xls_data, "Patient.Iden3", "Dataset.Iden3", "_"), sep = ";")
+xls_data$file_patientIDs <- gsub(";NA_NA", "", file_patientIDs)
 
 save(file = paste0(path_of_xls,name_new_patient_data,".RData"), xls_data)
 
