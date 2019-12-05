@@ -1,5 +1,10 @@
-get_Z_score_matrix <- function(xls_data, patientID, data_location, bad_mets){
-  old_patient_number <- sub(xls_data[grep(patientID, xls_data$PatientID, fixed = TRUE)[1], Old.patient.number], pattern = "\\..*", replacement = "")
+get_Z_score_matrix <- function(xls_data, patientID, data_location, bad_mets, columns){
+  IDcolumn <- columns[1]
+  numcolumn <- columns[2]
+
+  # old_patient_number <- sub(xls_data[grep(patientID, xls_data$PatientID, fixed = TRUE)[1], Old.patient.number], pattern = "\\..*", replacement = "")
+  old_patient_number <- sub(xls_data[grep(patientID, xls_data[,IDcolumn], fixed = TRUE)[1], numcolumn], pattern = "\\..*", replacement = "")
+  
   
   RDS_file <- list.files(path = data_location, pattern = "*.RDS")
   Zint_values <- readRDS(file = paste(data_location, RDS_file, sep = "/"))
@@ -22,7 +27,8 @@ get_Z_score_matrix <- function(xls_data, patientID, data_location, bad_mets){
   rm(tmp)
   
   #  Get patient specific columns and average Z-scores if #DBS > 1
-  DBS <- xls_data[tolower(PatientID) == tolower(patientID), Old.patient.number]
+  # DBS <- xls_data[tolower(PatientID) == tolower(patientID), Old.patient.number]
+  DBS <- xls_data[which(tolower(xls_data[,IDcolumn]) == tolower(patientID)), numcolumn]
   
   if(length(DBS) == 1){
     Z_scores_matrix <- Zint_pruned[,grep(paste0(DBS,"_Zscore"), colnames(Zint_pruned)), drop = FALSE]
