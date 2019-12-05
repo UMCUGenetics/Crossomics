@@ -1,8 +1,8 @@
 #!/bin/bash
 # This script is to run the run_R.sh script which calls Rscript to run the GeneMetabMapper.R script
 
-mock_genes_directory="/hpc/shared/dbg_mz/marten/Crossomics_2019_11_28/Results/Mock_genes"
-code_dir="/hpc/shared/dbg_mz/marten/Crossomics_2019_11_28/src_HPC"
+mock_genes_directory="/hpc/shared/dbg_mz/marten/Crossomics_2019_12_04/Results/Mock_genes"
+code_dir="/hpc/shared/dbg_mz/marten/Crossomics_2019_12_04/src_HPC"
 core_dump_dir="/hpc/dbg_mz/users/Marten/Core_Dump"
 R_location="/hpc/local/CentOS7/dbg_mz/R_libs/3.6.0/bin"
 thresholds="-1;1.5,-1.5;2,-3;3,-5;5"
