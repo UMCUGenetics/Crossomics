@@ -70,7 +70,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
   library("data.table")
   library("dplyr")
   
-  patient_number <- 4
+  patient_number <- 11
   thresholds <- "-1;1.5,-1.5;2,-3;3,-5;5"
   # thresholds <- "-1;1.5"
   max_rxns <-"8,10,12,15,17,19"
@@ -80,13 +80,13 @@ if(Sys.getenv("RSTUDIO") != "1") {
   # steps <- "5"
   steps <- as.numeric(unlist(strsplit(steps, split = ",")))
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  seed <- 10262
+  seed <- 72563
   outdir <- "Resultstest/"
   mock_date <- "2019-10-22/"
 }
 
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-11-28" # The date of this run 
+date_run <- "2019-12-04" # The date of this run 
 
 nr_mocks <- 200
 
@@ -108,7 +108,7 @@ thresh_pos_list <- as.numeric(thresh_df[2,])
 # HMDB0002467 <- determined to be non-bodily substances, but created in the lab
 bad_mets <- c("HMDB0002467")
 
-train_data_name <- "Crossomics_DBS_Marten_TraVal_updated20191128.RData"
+train_data_name <- "Crossomics_DBS_Marten_trimmed20191204.RData"
 
 redo <- NULL #(null or "_REDO")
 
@@ -222,7 +222,13 @@ mets2remove <- as.data.frame(readRDS(paste0(code_dir,"/../Data/mets2remove.RDS")
 i <- uni_dat_pat[patient_number]
 
 # Find out whether patient is known under multiple IDs 
-ident_pat <- unique(na.omit(xls_data[grep(i, xls_data$PatientID, fixed = TRUE), PatientID.Iden]))
+ident_pat <- unique(na.omit(xls_data[grep(i, xls_data$PatientID, fixed = TRUE), "PatientID.Iden"]))
+if(length(ident_pat) > 0){
+  ident_pat <- c(ident_pat, unique(na.omit(xls_data[grep(i, xls_data$PatientID, fixed = TRUE), "PatientID.Iden2"])))
+  if(length(ident_pat) > 1){
+    ident_pat <- c(ident_pat, unique(na.omit(xls_data[grep(i, xls_data$PatientID, fixed = TRUE), "PatientID.Iden3"])))
+  }
+}
 is_id_pat <- length(ident_pat) > 0
 
 
@@ -231,32 +237,36 @@ is_id_pat <- length(ident_pat) > 0
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 tmp <- unlist(strsplit(i, split = "\\^"))
-dataset <- tmp[1]
-patient <- tmp[2]
-pID <- paste(patient, dataset, sep = "^")
+# dataset <- tmp[1]
+# patient <- tmp[2]
+# pID <- paste(patient, dataset, sep = "^")
+comp_dataset <- tmp[1]
+comp_patient <- tmp[2]
+prim_dataset <- tmp[1]
+prim_patient <- tmp[2]
+patientID <- paste(comp_patient, comp_dataset, sep = "^")
 rm(tmp)
 
 if(is_id_pat){
-  tmp <- unlist(strsplit(ident_pat, split = "\\^"))
-  dataset.Iden <- tmp[1]
-  patient.Iden <- tmp[2]
-  rm(tmp)
-  comp_patient <- paste(patient, patient.Iden, sep = ";")
-  comp_dataset <- paste(dataset, dataset.Iden, sep = ";")
-  pID.Iden <- paste(patient.Iden, dataset.Iden, sep = "^")
-  patientID <- paste(pID, pID.Iden, sep = ";")
-} else {
-  comp_patient <- patient
-  comp_dataset <- dataset
-  patientID <- pID
+  for(identicals in ident_pat){
+    tmp <- unlist(strsplit(identicals, split = "\\^"))
+    dataset.Iden <- tmp[1]
+    patient.Iden <- tmp[2]
+    rm(tmp)
+    pID.Iden <- paste(patient.Iden, dataset.Iden, sep = "^")
+    # comp_patient <- paste(patient, patient.Iden, sep = ";")
+    # comp_dataset <- paste(dataset, dataset.Iden, sep = ";")
+    comp_patient <- paste(comp_patient, patient.Iden, sep = ";")
+    comp_dataset <- paste(comp_dataset, dataset.Iden, sep = ";")
+    patientID <- paste(patientID, pID.Iden, sep = ";")
+  }
 }
 
-
-
-cat("start patient:", comp_patient, "dataset:", comp_dataset, "\n")
+cat("start patient:", comp_patient, "dataset(s):", comp_dataset, "\n")
 
 # Get disease gene for patient
-dis_gene <- xls_data$Gene[grepl(patient, xls_data$Patient.number) & xls_data$Dataset == dataset][1]
+# dis_gene <- xls_data$Gene[grepl(patient, xls_data$Patient.number) & xls_data$Dataset == dataset][1]
+dis_gene <- xls_data$Gene[grepl(prim_patient, xls_data$Patient.number) & xls_data$Dataset == prim_dataset][1]
 
 # In the case there are multiple disease genes stated:
 if(grepl("[;,]+", dis_gene)) {
@@ -266,13 +276,20 @@ if(grepl("[;,]+", dis_gene)) {
 # Fix name for MUT / MMUT gene to pathwaycommons version
 dis_gene <- gsub(pattern = "^MUT$", replacement = "MMUT", x = dis_gene)
 
-data_location <- xls_data$Location[match(dataset, xls_data$Dataset)]
-data_location <- paste(code_dir,"../Data", paste(strsplit(data_location, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")
+# data_location <- xls_data$Location[match(dataset, xls_data$Dataset)]
+# data_location <- paste(code_dir,"../Data", paste(strsplit(data_location, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")
 
-if(is_id_pat){
-  data_location.Iden <- xls_data$Location.Iden[match(dataset.Iden, xls_data$Dataset.Iden)]
-  data_location.Iden <- paste(code_dir,"../Data", paste(strsplit(data_location.Iden, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")
-}
+datasets <- unlist(strsplit(comp_dataset, split = ";"))
+data_locations <- xls_data$Location[match(datasets, xls_data$Dataset)]
+data_locations <- unlist(lapply(data_locations, function(x) paste(code_dir,"../Data", paste(strsplit(x, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")))
+
+###### UP UNTIL HERE
+
+
+# if(is_id_pat){
+#   data_location.Iden <- xls_data$Location.Iden[match(dataset.Iden, xls_data$Dataset.Iden)]
+#   data_location.Iden <- paste(code_dir,"../Data", paste(strsplit(data_location.Iden, split = "\\\\")[[1]][c(6:8)], collapse = "/"), sep = "/")
+# }
 
 
 
@@ -317,22 +334,75 @@ if(is_id_pat){
 # }
 # colnames(av_Z_scores) <- paste0("av.z_", patient)
 
-z_mat <- get_Z_score_matrix(xls_data, patientID = i, data_location, bad_mets)
-if(is_id_pat){
-  tmp_mat <- get_Z_score_matrix(xls_data, patientID = ident_pat, data_location.Iden, bad_mets)
-  z_val_df <- merge(z_mat, tmp_mat, by.x = 0, by.y = 0, all = TRUE)
-  rownames(z_val_df) <- z_val_df$Row.names
-  z_val_df$Row.names <- NULL
-} else {
-  z_val_df <- data.frame(z_mat)
+patientIDs <- c(i, ident_pat)
+# IDcolumns <- c("PatientID", "PatientID.Iden", "PatientID.Iden2", "PatientID.Iden3")
+
+getcols <- function(iteration){
+  cols <- c("PatientID", "Old.patient.number")
+  if(iteration == 1){
+    return(cols)
+  } else if(iteration == 2) {
+    return(paste0(cols, ".Iden"))
+  } else {
+    return(paste0(cols, ".Iden", iteration - 1))
+  }
 }
 
-DBS <- ncol(z_val_df)
+# tmp <- list()
+for(nm in c(1:length(patientIDs))){
+  cols <- getcols(nm)
+  tmp <- get_Z_score_matrix(xls_data, 
+                                  patientID = patientIDs[nm], 
+                                  data_location = data_locations[nm], 
+                                  bad_mets, 
+                                  columns = cols)
+  if(nm == 1){
+    if(length(patientIDs) == 1){
+      z_mat <- tmp
+    } else {
+      # tmp <- data.frame(cbind(tmp, HMDB_names = rownames(tmp)))
+      tmp <- data.frame(tmp)
+      z_df <- tmp
+    }
+  } else {
+    # cnames <- c(colnames(z_mat), colnames(tmp))
+    # z_mat <- Matrix.utils::join.Matrix(z_mat, tmp, rownames(z_mat), rownames(tmp), all.x = TRUE, all.y = TRUE,
+    #                           out.class = class(z_mat), fill.x = ifelse(is(x, "sparseMatrix"), FALSE, NA))
+    z_df <- merge(z_df, tmp, by = "row.names", all = TRUE)
+    rownames(z_df) <- z_df$Row.names
+    z_df$Row.names <- NULL
+    # colnames(z_mat) <- cnames
+    if(nm == length(patientIDs)){
+      z_mat <- as.matrix(z_df)
+    }
+  }
+}
+
+
+# z_val_df <- data.frame(z_mat)
+
+
+
+
+# z_mat <- get_Z_score_matrix(xls_data, patientID = patientID, data_location, bad_mets)
+# if(is_id_pat){
+#   tmp_mat <- get_Z_score_matrix(xls_data, patientID = ident_pat, data_location.Iden, bad_mets)
+#   z_val_df <- merge(z_mat, tmp_mat, by.x = 0, by.y = 0, all = TRUE)
+#   rownames(z_val_df) <- z_val_df$Row.names
+#   z_val_df$Row.names <- NULL
+# } else {
+#   z_val_df <- data.frame(z_mat)
+# }
+
+# DBS <- ncol(z_val_df)
+DBS <- ncol(z_mat)
 
 # Exclude all Internal Standard 'metabolites'
-z_val_df <- z_val_df[!grepl("HMDB[1-2]?[0-9]00000$", rownames(z_val_df)), ]
+# z_val_df <- z_val_df[!grepl("HMDB[1-2]?[0-9]00000$", rownames(z_val_df)), ]
+z_mat <- z_mat[!grepl("HMDB[1-2]?[0-9]00000$", rownames(z_mat)), , drop = FALSE]
 
-av_Z_scores <- as.matrix(rowMeans(z_val_df, na.rm = TRUE))
+# av_Z_scores <- as.matrix(rowMeans(z_val_df, na.rm = TRUE))
+av_Z_scores <- as.matrix(rowMeans(z_mat, na.rm = TRUE))
 colnames(av_Z_scores) <- paste0("av.z_", comp_patient)
 
 
@@ -507,7 +577,7 @@ for (threshold in 1:length(thresh_pos_list)){
       tmp_Patient_metSetResult <- as.data.table(cbind(metSetResult[rank_dis_genes,],
                                                       "Position" = rank_dis_genes,
                                                       "Last_position" = total_genes,
-                                                      "DBS" = length(DBS),
+                                                      "DBS" = DBS,
                                                       "Top5_Gene_P.val" = top5))
       tmp_Patient_metSetResult[, c("Z_threshold","Step","Max_rxn","Seed","PatientID") := list(
         threshs, step, maxrxn, seed, patientID
