@@ -11,6 +11,7 @@
 
 library(rstudioapi)
 library(data.table)
+library(stringr)
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # functions ---------------------------------------------------------------
@@ -30,7 +31,8 @@ make.data.table <- function(datatable, identifier){
                   hmdb = toupper(paste.unique(hmdb)),
                   kegg = toupper(paste.unique(kegg)),
                   chebi = paste.unique(chebi),
-                  pubchem = paste.unique(pubchem)
+                  pubchem = paste.unique(pubchem),
+                  met_long = paste.unique(met_long)
   ), 
   by = identifier]
 }
@@ -56,7 +58,7 @@ gene_dir <-  paste0(code_dir,"/../Data/2019-08-12/maxrxn19/mss_5_HMDBtranslated"
 gene_list <- list.files(path = gene_dir)
 mets2remove <- as.data.frame(readRDS(paste0(code_dir,"/../Data/mets2remove.RDS")))
 
-
+train_data_name <- "Crossomics_DBS_Marten_TraVal_Inclusion_only_updated20191031.RData"
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -89,7 +91,7 @@ for(ge_fi in gene_list){
   counter <- counter + 1
   if(counter %% 100 == 0) cat("gene", counter, "out of", length(gene_list), "\n")
   ge_me_set <- readRDS(paste(gene_dir,ge_fi, sep = "/"))
-  ge_me_set <- ge_me_set[,c("rxn_id","hmdb","kegg","chebi","pubchem")]
+  ge_me_set <- ge_me_set[,c("rxn_id","hmdb","kegg","chebi","pubchem","met_long")]
   
   if(is.vector(ge_me_set)) {
     dimnames <- names(ge_me_set)
@@ -132,12 +134,17 @@ for(ge_fi in gene_list){
     ge_me_set <- rbind(ge_me_set, as.matrix(tmp[,-1]))
     rm(tmp)
   }
-  if(any(as.vector(unlist(lapply((strsplit(ge_me_set[,"hmdb"], split = ",")), length))) > 1)){
-    gen_dup_list <- c(gen_dup_list, ge_fi)
+  met_vec <- as.vector(unlist(lapply((strsplit(ge_me_set[,"hmdb"], split = ",")), length))) > 1
+  # if(any(as.vector(unlist(lapply((strsplit(ge_me_set[,"hmdb"], split = ",")), length))) > 1)){
+  if(any(met_vec)){
+    gen_dup_list <- rbind(gen_dup_list, ge_me_set[met_vec,, drop = FALSE])
+    # gen_dup_list <- c(gen_dup_list, ge_fi)
   }
 }
 
 
+gen_dup_DT <- as.data.table(gen_dup_list)
 
+gen_dup_DT <- gen_dup_DT[, list(Gene = paste(rxn_id, collapse = "; "), Name = paste(unique(met_long), collapse = ";")), by = .(hmdb)]
 
 
