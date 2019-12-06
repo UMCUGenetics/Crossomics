@@ -50,9 +50,10 @@ xls_unique <- as.data.table(xls_unique)
 
 
 seed_list <- list()
+dir.create("missing_seeds")
 
 # for(i in 1:nrow(xls_unique)){
-for(i in 1:2){
+for(i in 1:nrow(xls_unique)){
   incomplete_seeds <- NULL
   # patient <- xls_unique$Patient[i]
   # dataset <- xls_unique$Dataset[i]
@@ -66,7 +67,7 @@ for(i in 1:2){
     } else {
       incomplete_seeds <- c(incomplete_seeds, seed)
       seed_list[[i]] <- incomplete_seeds
-      # write.table(as.numeric(incomplete_seeds), file = paste0("missing_seeds/patient_",i,"_seeds.txt"), row.names = FALSE, col.names = FALSE)
+      # write.table(as.numeric(incomplete_seeds), file = paste0("missed_seeds/patient_",i,"_seeds.txt"), row.names = FALSE, col.names = FALSE)
     }
   }
 }
