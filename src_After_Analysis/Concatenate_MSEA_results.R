@@ -38,7 +38,7 @@ library("stringr") # for patient digit fixing
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-Z_thresholds <- c("-1, 1.5", "-1.5, 2", "-3, 3", "-5, 5")
+Z_thresholds <- c("1.5, -1", "2, -1.5", "3, -3", "5, -5")
 max_rxns <- c(8, 10, 12, 15, 17, 19)
 steps <- c(0,1,2,3,4,5)
 date <- "2019-12-04"
@@ -120,7 +120,7 @@ xls_unique$nr_disease_genes <- unlist(lapply(xls_unique$Gene, function(x) length
 xls_unique <- as.data.table(xls_unique)
 xls_unique[, Patient.collated := str_replace_all(paste(Patient, Patient.Iden, Patient.Iden2, Patient.Iden3, sep = ";"), pattern = ";NA", replacement = "")]
 
-library(splitstackshape)
+# library(splitstackshape)
 # DT_disgen_split <- cSplit(xls_unique, "Gene", sep = ";", direction = "long")
 
 
@@ -167,10 +167,10 @@ library(splitstackshape)
 
 follow_nr <- 1
 setresults <- list()
-for (i in 1:nrow(xls_unique)){
+# for (i in 1:nrow(xls_unique)){
 
 
-# for (i in 1:4){
+for (i in 1:4){
   patient <- xls_unique$Patient.collated[i]
   cat("Patient:",patient,"\n")
 #   
@@ -215,8 +215,7 @@ for (i in 1:nrow(xls_unique)){
     path2 <- paste0(path,"/seed",seed,"/MSEA_results.RData")
     load(path2)
     Patient_metSetResult[, Top5_Gene_P.val := as.character(Top5_Gene_P.val)]
-
-    data.frame(lapply(Patient_metSetResult, as.character), stringsAsFactors=FALSE)
+    # Patient_metSetResult <- data.frame(lapply(Patient_metSetResult, as.character), stringsAsFactors=FALSE)
 
     setresults[[follow_nr]] <- Patient_metSetResult
     
