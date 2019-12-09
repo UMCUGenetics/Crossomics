@@ -70,7 +70,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
   library("data.table")
   library("dplyr")
   
-  patient_number <- 25
+  patient_number <- 66
   thresholds <- "-1;1.5,-1.5;2,-3;3,-5;5"
   # thresholds <- "-1;1.5"
   max_rxns <-"8,10,12,15,17,19"
@@ -80,8 +80,8 @@ if(Sys.getenv("RSTUDIO") != "1") {
   # steps <- "5"
   steps <- as.numeric(unlist(strsplit(steps, split = ",")))
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  seed <- 72563
-  outdir <- "Resultstest/"
+  seed <- 77285
+  outdir <- "Results/"
   mock_date <- "2019-10-22/"
 }
 
