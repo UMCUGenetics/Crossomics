@@ -34,9 +34,9 @@ library("stringr")
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-Z_thresholds <- c("1.5, -1", "2, -1.5", "3, -3", "5, -5")
-max_rxns <- c(8, 10, 12, 15, 17, 19)
-steps <- c(0,1,2,3,4,5)
+# Z_thresholds <- c("1.5, -1", "2, -1.5", "3, -3", "5, -5")
+# max_rxns <- c(8, 10, 12, 15, 17, 19)
+# steps <- c(0,1,2,3,4,5)
 date <- "2019-12-04"
 seed_date <- "2019-10-22"
 seeds <- sub(x = list.files(path = paste0(code_dir, "/../Results/Mock_genes/",seed_date,"/")),
@@ -44,6 +44,9 @@ seeds <- sub(x = list.files(path = paste0(code_dir, "/../Results/Mock_genes/",se
              replacement = "\\1")
 seeds <- as.numeric(seeds[!grepl("[a-z]", seeds)])
 patient_info_file <- "Crossomics_DBS_Marten_trimmed20191205.RData"
+
+patient_gene_combinations <- data.frame("Patient" = c("P286", "P268", "P013", "P190"),
+                                        "Gene" = c("MMACHC", "IDH2", "BCKDHA", "ETFDH"))
 
 
 
@@ -94,12 +97,28 @@ for (i in 1:nrow(xls_unique)){
   }
 }
 
-DT <- dplyr::bind_rows(setresults)
+DT <- data.table(dplyr::bind_rows(setresults))
 
-DT[ , c("Rank.frac", "Rev.Rank.frac") := list(Position/Last_position, 1-((Position-1)/(Last_position-1))) ]
-DT[, Z_threshold:=factor(Z_threshold, levels = Z_thresholds)]
-DT[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
-DT[, Step:=factor(Step, levels = steps)]
+mycolumns = c("Z_threshold", "Max_rxn", "Step", "Rank.frac", "Rev.Rank.frac")
+DT[ , (mycolumns) := list(factor(Z_threshold), factor(Max_rxn), factor(Step), Position/Last_position, 1-((Position-1)/(Last_position-1)))]
+
+# DT[ , c("Rank.frac", "Rev.Rank.frac") := DT[,list(Position/Last_position, 1-((Position-1)/(Last_position-1))) ]]
+# DT[, Z_threshold:=factor(Z_threshold, levels = Z_thresholds)]
+# DT[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
+# DT[, Step:=factor(Step, levels = steps)]
+
+# DT[, c("Z_threshold", "Max_rxn", "Step") := list(factor(Z_threshold), factor(Max_rxn), factor(Step))]
+
+DT[, Include := TRUE]
+for(i in c(1:nrow(patient_gene_combinations))){
+  tmpPat <- grepl(patient_gene_combinations$Patient[i], DT$PatientID)
+  tmpGen <- !grepl(patient_gene_combinations$Gene[i], DT$Gene)
+  tmp <- tmpPat & tmpGen
+  DT[ tmp, Include := FALSE]
+  # if(DT[Patient == patient_gene_combinations$Patient[i] & Gene == patient_gene_combinations$Gene[i]])
+}
+
+
 
 saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_all.RDS"))
 
