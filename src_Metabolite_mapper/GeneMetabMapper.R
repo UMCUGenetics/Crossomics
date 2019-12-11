@@ -82,11 +82,11 @@ if(Sys.getenv("RSTUDIO") != "1") {
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
   seed <- 77285
   outdir <- "Results/"
-  mock_date <- "2019-10-22/"
+  mock_date <- "2019-12-10/"
 }
 
 date_input <- "2019-08-12" # The date of the data/mss_0 etc. runs
-date_run <- "2019-12-04" # The date of this run 
+date_run <- "2019-12-10" # The date of this run 
 
 nr_mocks <- 200
 
@@ -108,7 +108,7 @@ thresh_pos_list <- as.numeric(thresh_df[2,])
 # HMDB0002467 <- determined to be non-bodily substances, but created in the lab
 bad_mets <- c("HMDB0002467")
 
-train_data_name <- "Crossomics_DBS_Marten_trimmed20191204.RData"
+train_data_name <- "Crossomics_DBS_Marten_trimmed20191205.RData"
 
 redo <- NULL #(null or "_REDO")
 
