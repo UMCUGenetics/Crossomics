@@ -100,6 +100,11 @@ for (i in 1:nrow(xls_unique)){
 
 DT <- data.table(dplyr::bind_rows(setresults))
 
+DT[Z_threshold == "1.5, -1", Z_threshold := "-1, 1.5" ]
+DT[Z_threshold == "2, -1.5", Z_threshold := "-1.5, 2" ]
+DT[Z_threshold == "3, -3", Z_threshold := "-3, 3" ]
+DT[Z_threshold == "5, -5", Z_threshold := "-5, 5" ]
+
 mycolumns = c("Z_threshold", "Max_rxn", "Step", "Rank.frac", "Rev.Rank.frac")
 DT[ , (mycolumns) := list(factor(Z_threshold), factor(Max_rxn), factor(Step), Position/Last_position, 1-((Position-1)/(Last_position-1)))]
 
@@ -110,6 +115,7 @@ for(i in c(1:nrow(patient_gene_combinations))){
   tmp <- tmpPat & tmpGen
   DT[ tmp, Include := FALSE]
 }
+
 
 
 
