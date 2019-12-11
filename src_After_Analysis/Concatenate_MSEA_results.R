@@ -42,8 +42,12 @@ seeds <- sub(x = list.files(path = paste0(code_dir, "/../Results/Mock_genes/",se
 seeds <- as.numeric(seeds[!grepl("[a-z]", seeds)])
 patient_info_file <- "Crossomics_DBS_Marten_trimmed20191205.RData"
 
-patient_gene_combinations <- data.frame("Patient" = c("P286", "P268", "P013", "P190"),
-                                        "Gene" = c("MMACHC", "IDH2", "BCKDHA", "ETFDH"))
+patient_gene_combinations <- data.frame("PatientID" = c("P286^RES_DBS_20181001_Run1_Algoritmetest_1", 
+                                                        "P268^RES_DBS_20181001_Run1_Algoritmetest_1", 
+                                                        "P013^2017_008_MetabolomicsDiagnosis_RUN1_1", 
+                                                        "P190^RES_DBS_20181001_Run1_Algoritmetest_1"),
+                                        "Gene" = c("MMACHC", "IDH2", "BCKDHA", "ETFDH"), 
+                                        stringsAsFactors = FALSE)
 
 
 
@@ -101,8 +105,8 @@ DT[ , (mycolumns) := list(factor(Z_threshold), factor(Max_rxn), factor(Step), Po
 
 DT[, Include := TRUE]
 for(i in c(1:nrow(patient_gene_combinations))){
-  tmpPat <- grepl(patient_gene_combinations$Patient[i], DT$PatientID)
-  tmpGen <- !grepl(patient_gene_combinations$Gene[i], DT$Gene)
+  tmpPat <- grepl(patient_gene_combinations$PatientID[i], DT$PatientID, fixed = TRUE)
+  tmpGen <- !grepl(patient_gene_combinations$Gene[i], DT$Gene, fixed = TRUE)
   tmp <- tmpPat & tmpGen
   DT[ tmp, Include := FALSE]
 }
