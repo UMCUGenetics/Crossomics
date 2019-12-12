@@ -7,7 +7,6 @@
 # OS:         macOS Mojave 10.14.6
 # 
 # libraries:
-# tidyr       0.8.3
 # rstudioapi  0.10
 # stringr     1.4.0
 # data.table  1.12.6
@@ -70,7 +69,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
   library("data.table")
   library("dplyr")
   
-  patient_number <- 66
+  patient_numbers <- c(53)
   thresholds <- "-1;1.5,-1.5;2,-3;3,-5;5"
   # thresholds <- "-1;1.5"
   max_rxns <-"8,10,12,15,17,19"
@@ -80,7 +79,7 @@ if(Sys.getenv("RSTUDIO") != "1") {
   # steps <- "5"
   steps <- as.numeric(unlist(strsplit(steps, split = ",")))
   code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-  seed <- 77285
+  seed <- 92431
   outdir <- "Results/"
   mock_date <- "2019-12-10/"
 }
@@ -112,6 +111,9 @@ train_data_name <- "Crossomics_DBS_Marten_trimmed20191205.RData"
 
 redo <- NULL #(null or "_REDO")
 
+
+for(patient_number in patient_numbers){
+  
 
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -488,4 +490,4 @@ save(Patient_metSetResult, file = paste0(filename,"/MSEA_results.RData"))
 
 
 
-
+}

@@ -4,8 +4,8 @@ library(rstudioapi)
 
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 
-date <- "2019-12-04"
-seed_date <- "2019-10-22"
+date <- "2019-12-10"
+seed_date <- "2019-12-10"
 
 
                          
@@ -67,7 +67,7 @@ for(i in 1:nrow(xls_unique)){
     } else {
       incomplete_seeds <- c(incomplete_seeds, seed)
       seed_list[[i]] <- incomplete_seeds
-      write.table(as.numeric(incomplete_seeds), file = paste0("missed_seeds/patient_",i,"_seeds.txt"), row.names = FALSE, col.names = FALSE)
+      # write.table(as.numeric(incomplete_seeds), file = paste0("missed_seeds/patient_",i,"_seeds.txt"), row.names = FALSE, col.names = FALSE)
     }
   }
 }
