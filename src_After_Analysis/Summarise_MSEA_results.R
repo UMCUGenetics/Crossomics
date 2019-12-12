@@ -21,6 +21,7 @@
 
 library(rstudioapi)
 library(data.table)
+library(stringr)
 # library(RColorBrewer)
 # library(ggplot2)
 # library(scales)
@@ -34,7 +35,7 @@ library(data.table)
 # Adjustable settings -----------------------------------------------------
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Date of data
-date <- "2019-12-04"
+date <- "2019-12-10"
 
 
 
@@ -52,10 +53,6 @@ nr_seeds <- length(unique(DT$Seed))
 ##### Modify initial datatable --------------------------------------------
 DT[,c("Prioritised15","Prioritised10","Prioritised05","Prioritised02") := 
      list(Position <= 15, Position <= 10, Position <= 5, Position <= 2)]
-DT[, Missed := P.value==1]
-
-
-
 
 
 
@@ -154,6 +151,7 @@ DT_per_patient[, c("Step", "Z_threshold", "Max_rxn", "PatientID", "Gene", "DBS",
 
 DT_per_patient[, Av_rank_excl_miss := ifelse(Missed > 0, NA, Av_rank)]
 DT_per_patient[, Sd_rank_excl_miss := ifelse(Missed > 0, NA, Sd_rank)]
+DT_per_patient[, Dataset := str_replace_all(PatientID, "P[0-9]+\\^","")]
 
 # DT_per_patient[DT_per_patient$Missed > 0, Sd_rank := -1]
 # DT_per_patient[, Colour := ifelse(DT_per_patient[,Transporter], "Red","Black")]
@@ -163,6 +161,7 @@ DT_per_patient[, Sd_rank_excl_miss := ifelse(Missed > 0, NA, Sd_rank)]
 # For some reason, probably something with the list() creation of the DT, the DT doesn't correctly register as one
 # So this 'rectify' is necessary
 DT_per_patient <- data.table(DT_per_patient)
+
 
 
 saveRDS(DT_per_patient, paste0(code_dir,date,"/MSEA_DT_compiled_per_patient.RDS"))

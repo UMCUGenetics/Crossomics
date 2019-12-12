@@ -34,8 +34,8 @@ library("stringr")
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 code_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
-date <- "2019-12-04"
-seed_date <- "2019-10-22"
+date <- "2019-12-10"
+seed_date <- "2019-12-10"
 seeds <- sub(x = list.files(path = paste0(code_dir, "/../Results/Mock_genes/",seed_date,"/")),
              pattern = ".*seed([^seed]*?)\\.txt",
              replacement = "\\1")
@@ -115,6 +115,8 @@ for(i in c(1:nrow(patient_gene_combinations))){
   tmp <- tmpPat & tmpGen
   DT[ tmp, Include := FALSE]
 }
+
+DT[, Missed := P.value == 1]
 
 
 
