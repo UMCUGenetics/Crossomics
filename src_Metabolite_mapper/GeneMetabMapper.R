@@ -327,6 +327,8 @@ for (threshold in 1:length(thresh_pos_list)){
   thresh_F_pos <- thresh_pos_list[threshold]
   thresh_F_neg <- thresh_neg_list[threshold]
   threshs <- paste(c(thresh_F_pos,thresh_F_neg), collapse = ", ")
+  # threshs <- paste(c(thresh_F_neg, thresh_F_pos), collapse = ", ") <- this one is neater, but i used the above one last time
+  
   
   for (step in steps){
     # for (step in c(steps[4],steps[5])){
