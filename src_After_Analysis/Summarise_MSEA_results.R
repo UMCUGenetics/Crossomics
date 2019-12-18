@@ -103,11 +103,11 @@ for(val in c(TRUE, FALSE)){
   # DT_per_parameter[, Max_rxn:=factor(Max_rxn, levels = max_rxns)]
   
   # return 1 or 0 depending on whether the parameter combination is the best scoring or not
-  DT_per_parameter[,c("best15","best10","best05","best02") := list(
-    ifelse(Prior.frac15 == max(Prior.frac15), 1, 0),
-    ifelse(Prior.frac10 == max(Prior.frac10), 1, 0),
-    ifelse(Prior.frac05 == max(Prior.frac05), 1, 0),
-    ifelse(Prior.frac02 == max(Prior.frac02), 1, 0))]
+  # DT_per_parameter[,c("best15","best10","best05","best02") := list(
+  #   ifelse(Prior.frac15 == max(Prior.frac15), 1, 0),
+  #   ifelse(Prior.frac10 == max(Prior.frac10), 1, 0),
+  #   ifelse(Prior.frac05 == max(Prior.frac05), 1, 0),
+  #   ifelse(Prior.frac02 == max(Prior.frac02), 1, 0))]
   
   # Determine best parameters according to non-missed disease genes (frac. missed < 0.5)
   DT_tmp <- DT_per_parameter[,Av_non_missed, Missed.frac]
@@ -117,13 +117,24 @@ for(val in c(TRUE, FALSE)){
   # DT_per_parameter[,"best_av_NM"] <- DT_per_parameter$Missed.frac < 0.5 & DT_per_parameter$Av_non_missed %in% min_values
   DT_per_parameter[best_av_NM == TRUE, best_order_NM := rank(DT_per_parameter[best_av_NM == TRUE, Av_non_missed])]
   
-  best_ratio_in_top10 <- head(sort(DT_per_parameter[,Prior.frac10], decreasing = TRUE),5)
-  DT_per_parameter[,"best_top10" := Prior.frac10 %in% best_ratio_in_top10]
-  DT_per_parameter[best_top10 == TRUE, best_order_top10 := rank(-DT_per_parameter[best_top10 == TRUE, Prior.frac10])]
+  # best_ratio_in_top10 <- head(sort(DT_per_parameter[,Prior.frac10], decreasing = TRUE),5)
+  DT_per_parameter[, c("best_order_top02", "best_order_top05", "best_order_top10", "best_order_top15") :=
+                     list(
+                       frank(-Prior.frac02),
+                       frank(-Prior.frac05),
+                       frank(-Prior.frac10),
+                       frank(-Prior.frac15)
+                     )]
+  # DT_per_parameter[,"best_order_top10" := frank(-Prior.frac10)]
+  # DT_per_parameter[,"best_order_top05" := frank(-Prior.frac05)]
   
-  best_ratio_in_top05 <- head(sort(DT_per_parameter[,Prior.frac05], decreasing = TRUE),5)
-  DT_per_parameter[,"best_top05" := Prior.frac05 %in% best_ratio_in_top05]
-  DT_per_parameter[best_top05 == TRUE, best_order_top05 := rank(-DT_per_parameter[best_top05 == TRUE, Prior.frac05])]
+  # DT_per_parameter[,"best_top10" := Prior.frac10 %in% best_ratio_in_top10]
+  # DT_per_parameter[best_top10 == TRUE, best_order_top10 := rank(-DT_per_parameter[best_top10 == TRUE, Prior.frac10])]
+  
+  # best_ratio_in_top05 <- head(sort(DT_per_parameter[,Prior.frac05], decreasing = TRUE),5)
+  
+  # DT_per_parameter[,"best_top05" := Prior.frac05 %in% best_ratio_in_top05]
+  # DT_per_parameter[best_top05 == TRUE, best_order_top05 := rank(-DT_per_parameter[best_top05 == TRUE, Prior.frac05])]
   
   DT_per_parameter <- data.table(DT_per_parameter)
   
