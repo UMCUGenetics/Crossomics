@@ -77,11 +77,17 @@ date <- "2019-12-10"
 code_dir <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Results/")
 
 DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_all.RDS")))
-DT_per_parameter_val <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_validation_per_parameter.RDS")))
-DT_per_patient_val <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_validation_per_patient.RDS")))
-DT_per_parameter_tra <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_training_per_parameter.RDS")))
-DT_per_patient_tra <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_training_per_patient.RDS")))
+# DT_per_parameter_val <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_validation_per_parameter.RDS")))
+# DT_per_patient_val <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_validation_per_patient.RDS")))
+# DT_per_parameter_tra <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_training_per_parameter.RDS")))
+# DT_per_patient_tra <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_training_per_patient.RDS")))
 
+DT_per_parameter <- readRDS(paste0(code_dir,date,"/MSEA_DT_per_parameter.RDS"))
+
+DT_validation_per_parameter <- readRDS(paste0(code_dir,date,"/MSEA_DT_by_validation_per_parameter.RDS"))
+
+test <- readRDS(paste0(code_dir,date,"/Metabolite_set_sizes.RDS"))
+DT_met_sets <- readRDS(paste0(code_dir,date,"/Metabolite_set_sizes.RDS"))
 
 # DT_per_parameter_tra[, rank_10 := frank(-Prior.frac10)]
 
@@ -254,39 +260,69 @@ ggsave(paste0(outdir_name,"/",train_val,"_Ranks_And_Missed_Single_Par_Comb_",sub
 # Combination plot of correctly prioritised and missed genes --------------
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+# my_reds <- rev(brewer.pal(10, "Reds"))
+# my_cols <- c("#a85a32","#a84614","#b53d00", "#b53300","#b52400","#b51800","#b50000","#d10202", "#de1013","#de1039")
+# my_cols <- scale_colour_gradient(high = "#c92222", low = "#22c939", guide = "legend")
+
 # top 10 correctly prioritized, incl best 5 anotated points, all parameters
-p <- ggplot(DT_per_parameter_tra, aes(x = Step)) +
-  geom_line(aes(y = Prior.frac10, colour = "line10", group = 1)) +
-  geom_point(aes(y = Prior.frac10, colour = "line10"), size=0.5) +
-  geom_line(aes(y = Missed.frac, colour = "Missed", group = 1)) +
-  geom_point(aes(y = Missed.frac, colour = "Missed"), size=0.5) +
+# p <- ggplot(DT_per_parameter_tra, aes(x = Step)) +
+p <- ggplot(DT_validation_per_parameter, aes(x = Step)) +
+  geom_line(data = DT_validation_per_parameter[Validation == TRUE, ], aes(y = Av.prior.frac10, colour = "Validation", group = "Validation")) +
+  geom_errorbar(data = DT_validation_per_parameter[Validation == TRUE, ], 
+                aes(ymax = Av.prior.frac10 + Sd.prior.frac10, 
+                    ymin = Av.prior.frac10 - Sd.prior.frac10, 
+                    colour = "Validation"), 
+                width = 0.4) +
+  geom_line(data = DT_validation_per_parameter[Validation == FALSE, ], aes(y = Av.prior.frac10, colour = "Training", group = "Training")) +
+  geom_errorbar(data = DT_validation_per_parameter[Validation == FALSE, ], 
+                aes(ymax = Av.prior.frac10 + Sd.prior.frac10, 
+                    ymin = Av.prior.frac10 - Sd.prior.frac10, 
+                    colour = "Training"), 
+                width = 0.4) +
+  geom_line(data = DT_per_parameter, aes(y = Missed.frac, colour = "Missed", group = 1)) +
+  geom_point(data = DT_per_parameter,aes(y = Missed.frac, colour = "Missed"), size=0.5) +
+  # geom_line(aes(y = Prior.frac10, colour = "line10", group = 1)) +
+  # geom_point(aes(y = Prior.frac10, colour = "line10"), size=0.5) +
+  # geom_errorbar(aes(x = Step, ymax = Av.prior.frac10 + Sd.prior.frac10, ymin = Av.prior.frac10 - Sd.prior.frac10)) +
+  # geom_line(data = DT_per_parameter[Validation == FALSE], aes(x = Step, y = Prior.frac10, group = Training)) +
+  # geom_line(data = DT_per_parameter[Validation == TRUE], aes(x = Step, y = Prior.frac10, colour = Validation_number, group = Validation)) +
+  # geom_line(data = DT_per_parameter[Validation == FALSE], aes(x = Step, y = Prior.frac10, colour = Validation_number, group = Validation)) +
+  # geom_line(aes(y = Prior.frac10, colour = interaction(Validation_number, Validation), group = Validation)) +
+  # geom_point(aes(y = Prior.frac10, group = Validation_number), size=0.5) +
+
   facet_grid(Max_rxn ~ Z_threshold, labeller = labeller(Max_rxn = Rxn_labs, Z_threshold = Thresh_labs)) +
   theme_light() + 
   ylab("Disease genes / Total dis. genes") +
   xlab("Max distance to primary reaction") +
   ggtitle("Correct disease gene prioritisation") +
-  scale_color_manual(name = "Prioritised Genes",
-                     labels = c("In Top 10", "Missed"),
-                     values=c(my_greens[1],'RED')) +
+  # scale_color_manual(name = "Prioritised Genes",
+  #                    labels = c("In Top 10", "Missed"),
+  #                    values=c(my_greens[1],'RED')) +
   ylim(0,1)
 
 for(i in c(1:5)){
-  p <- p + geom_point(data = DT_per_parameter_tra[as.vector(DT_per_parameter_tra[,"best_order_top10"]==i),],aes(x=Step, y=Prior.frac10, shape = "Best"), shape = "*", size=8)
-  p <- p + geom_text(data = DT_per_parameter_tra[as.vector(DT_per_parameter_tra[,"best_order_top10"]==i),],
-                     aes(x=Step, y=Prior.frac10, label = signif(Prior.frac10, digits = digit_significance), group = best_order_top10),
+  # p <- p + geom_point(data = DT_per_parameter_tra[as.vector(DT_per_parameter_tra[,"best_order_top10"]==i),],aes(x=Step, y=Prior.frac10, shape = "Best"), shape = "*", size=8)
+  # p <- p + geom_text(data = DT_per_parameter_tra[as.vector(DT_per_parameter_tra[,"best_order_top10"]==i),],
+  # p <- p + geom_point(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top10"]==i),],aes(x=Step, y=Prior.frac10, shape = "Best"), shape = "*", size=8)
+  # p <- p + geom_text(data = DT_per_parameter[as.vector(DT_per_parameter[,"best_order_top10"]==i),],
+  p <- p + geom_point(data = DT_validation_per_parameter[Validation == FALSE & as.vector(DT_validation_per_parameter[Validation == FALSE, "best_order_top10"]==i),],
+                      aes(x=Step, y=Av.prior.frac10, shape = "Best"), 
+                      shape = "*", 
+                      size=8)
+  p <- p + geom_text(data = DT_validation_per_parameter[Validation == FALSE & as.vector(DT_validation_per_parameter[Validation == FALSE, "best_order_top10"]==i),],
+                     aes(x=Step, y=Av.prior.frac10, label = signif(Av.prior.frac10, digits = digit_significance), group = best_order_top10),
                      size=3,
-                     # show.legend = FALSE,
                      colour = my_sig_palette[i],
                      position = position_dodge(width = 2),
                      vjust = -0.8)
 }
 
 z <- pretty_plot(p, theme = "light")
-ggsave(paste0(outdir_name,"/CorrectPrior_top10_training_",sub_name,".png"), plot = z,
-       width = 300, height = 200, dpi=resolution, units = "mm")
+# ggsave(paste0(outdir_name,"/CorrectPrior_top10_training_",sub_name,".png"), plot = z,
+#        width = 300, height = 200, dpi=resolution, units = "mm")
+ggsave(paste0(outdir_name,"/CorrectPrior_top10_tra_val_",sub_name,".png"), plot = z,
+       width = 300, height = 200, dpi=600, units = "mm")
 
-which(!is.na(DT_per_parameter_tra[,"best_order_top10"]))
-which(!is.na(DT_per_parameter_val[,"best_order_top10"]))
 
 # p <- ggplot(DT_per_parameter, aes(x = Step)) +
 #   # geom_line(aes(y = Prior.frac15, colour = my_greens[4], group = 1)) +
