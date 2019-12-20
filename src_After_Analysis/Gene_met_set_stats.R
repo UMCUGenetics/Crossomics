@@ -5,7 +5,9 @@ setwd("/Users/mkerkho7/DIMS2_repo/Crossomics/Data/2019-08-12/")
 maxrxns <- c(8, 10, 12, 15, 17, 19)
 steps <- c(0, 1, 2, 3, 4, 5)
 
-outdir_name <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Plots/",Sys.Date())
+date <- "2019-12-10"
+
+outdir_name <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Plots/",date)
 if (!file.exists(outdir_name))dir.create(outdir_name, recursive = TRUE)
 
 gn_fi_list <- list.files("../mss/")
@@ -41,7 +43,7 @@ for(mx in maxrxns){
 }
 DT[, Step := as.factor(Step)]
 DT[, Maxrxn := as.factor(Maxrxn)]
-DT[, Nr_mets_log := log10(Nr_mets + 1)]
+DT[, Nr_mets_log := log2(Nr_mets + 1)]
 
 
 # DT_par <- data.table(Median = rep(0L, length(maxrxns)*length(steps)),
@@ -60,8 +62,9 @@ DT[, Empty := sum(Nr_mets) == 0, by = Gene]
 empty_genes <- unique(DT[Empty == TRUE, Gene])
 
 DT <- DT[ Empty == FALSE, ]
+DT[, Gene := str_replace(Gene, pattern = ".RDS", replacement = "")]
 
-
+saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/Metabolite_set_sizes.RDS"))
 
 q <- position_dodge(0.8)
 p <- ggplot(DT, aes(y = Nr_mets_log, x = Step, fill = Maxrxn)) +
@@ -69,11 +72,26 @@ p <- ggplot(DT, aes(y = Nr_mets_log, x = Step, fill = Maxrxn)) +
   geom_boxplot(alpha = 0.5, outlier.shape = NA) +
   # stat_summary(geom = "crossbar", width = 0.6, fatten=0, color="red", position = q,
   #              fun.data = function(x){c(y=median(x), ymin=median(x), ymax=median(x))}) +
-  scale_y_continuous(breaks = round(seq(min(DT$Nr_mets_log), ceiling(max(DT$Nr_mets_log)), by = 0.5),1)) +
-  labs(y = "Log10(Nr_mets + 1)", x = "Distance to primary reaction", fill = "Extension stringency")
+  scale_y_continuous(breaks = round(seq(min(DT$Nr_mets_log), ceiling(max(DT$Nr_mets_log)), by = 1),1)) +
+  # labs(y = "Log2(Nr_mets + 1)", x = "Distance to primary reaction", fill = "Extension stringency")
+  labs(y = bquote(~Log[2]~"([mets in set] + 1)"), x = "Distance to primary reaction", fill = "Extension stringency")
   # scale_fill_gradient(name = "n occurrences", trans="pseudo_log")
 
 ggsave(paste0(outdir_name,"/Met_set_overview.png"), plot = p,
+       width = 300, height = 100, dpi=100, units = "mm")
+
+# And for the disease genes (need to get a vector of the genes themselves somewhere else)
+p2 <- ggplot(DT[Gene %in% disease_genes], aes(y = Nr_mets_log, x = Step, fill = Maxrxn)) +
+  geom_point(aes(fill = Maxrxn), size = 0.5, shape = 21, position = position_jitterdodge(), alpha = 0.3) +
+  geom_boxplot(alpha = 0.5, outlier.shape = NA) +
+  # stat_summary(geom = "crossbar", width = 0.6, fatten=0, color="red", position = q,
+  #              fun.data = function(x){c(y=median(x), ymin=median(x), ymax=median(x))}) +
+  scale_y_continuous(breaks = round(seq(min(DT[Gene %in% disease_genes]$Nr_mets_log), ceiling(max(DT[Gene %in% disease_genes]$Nr_mets_log)), by = 1),1)) +
+  # labs(y = "Log2(Nr_mets + 1)", x = "Distance to primary reaction", fill = "Extension stringency")
+  labs(y = bquote(~Log[2]~"([mets in set] + 1)"), x = "Distance to primary reaction", fill = "Extension stringency")
+# scale_fill_gradient(name = "n occurrences", trans="pseudo_log")
+
+ggsave(paste0(outdir_name,"/Met_set_overview_disease_genes.png"), plot = p2,
        width = 300, height = 100, dpi=100, units = "mm")
 
 
