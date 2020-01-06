@@ -76,83 +76,153 @@ DT[,c("Prioritised15","Prioritised10","Prioritised05","Prioritised02") :=
 # data table per parameter ------------------------------------------------
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-get_DT_per_parameter <- function(DT, validation_numbers = stop("'validation_numbers' must be specified")){
+get_DT_per_parameter <- function(DT, validation_numbers = NULL){
   DT_per_parameter <- NULL
-  for(validation_number in c(1:validation_numbers)){
-    for(val in c(TRUE, FALSE)){
-      # tra_val <- ifelse(val, "val", "tra")
-      # pasted_tra_val <-  paste0(tra_val, validation_number) 
-      DT_tmp <- data.table()
-      DT_tmp1 <- data.table()
-      DT_tmp2 <- data.table()
-      # DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", paste(c("Prior.frac15","Prior.frac10",
-      #                                                       "Prior.frac05","Prior.frac02","Rank.frac.av.rev","Rank.frac.av",
-      #                                                       "Missed","Missed.frac","Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", 
-      #                                                       "Prior.sd10", "Prior.sd05", "Prior.sd02","Rank.frac.sd.rev","Rank.frac.sd",
-      #                                                       "Validation", "Validation_number"), 
-      #                                                     pasted_tra_val, sep = ";")) :=  
-      DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Prior.frac15","Prior.frac10",
-                  "Prior.frac05","Prior.frac02","Rank.frac.av.rev","Rank.frac.av",
-                  "Missed","Missed.frac","Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", 
-                  "Prior.sd10", "Prior.sd05", "Prior.sd02","Rank.frac.sd.rev","Rank.frac.sd",
-                  "Validation", "Validation_number") :=  
-                # DT[Include == TRUE & get(eval(paste0("Validation", validation_number))) == val, list(
-                DT[Include == TRUE & get(eval(paste0("Validation", validation_number))) == val, list(
-                  mean(Prioritised15), # Prior.frac15
-                  mean(Prioritised10), # Prior.frac10
-                  mean(Prioritised05), # Prior.frac05
-                  mean(Prioritised02), # Prior.frac02
-                  mean(Rev.Rank.frac), # Prior.pos.frac.av.rev
-                  mean(Rank.frac), # Prior.pos.frac.av
-                  sum(P.value==1)/ifelse(val, length(validation), length(nr_seeds)-length(validation)), # Missed; if a gene is missed in 1 seed, it is missed in all --> count once per parametercombination
-                  mean(P.value==1), # Missed.frac
-                  max(Last_position), # Max_Tot.Genes
-                  min(Last_position), # Min_Tot.Genes
-                  sd(Prioritised15), # Prior.sd15
-                  sd(Prioritised10), # Prior.sd10
-                  sd(Prioritised05), # Prior.sd05
-                  sd(Prioritised02), # Prior.sd02
-                  sd(Rev.Rank.frac), # Prior.pos.frac.sd.rev
-                  sd(Rank.frac), # Prior.pos.frac.sd
-                  val, # Validation
-                  validation_number # Validation_number
-                ), by = .(Step, Z_threshold, Max_rxn)]]
-      
-      # missed_col_names <- paste(c("Av_non_missed","Sd_non_missed"), pasted_tra_val, sep = ";")
-      
-      # DT_tmp2[, c("Step", "Z_threshold", "Max_rxn", missed_col_names) := 
-      #           DT[P.value != 1, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
-      DT_tmp2[, c("Step", "Z_threshold", "Max_rxn", "Av_non_missed","Sd_non_missed") := 
-                DT[P.value != 1, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
-      
-      DT_tmp <- merge(DT_tmp1, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn"))
-      
-      
-      # prioritized_col_names <- paste(c("Prior.frac15","Prior.frac10", "Prior.frac05","Prior.frac02"), pasted_tra_val, sep = ";")
-      
-      # DT_tmp[, paste(c("best_order_top02", "best_order_top05", "best_order_top10", "best_order_top15"), 
-      #                pasted_tra_val, sep = ";") :=
-      #                    list(
-      #                      frank(-get(eval(prioritized_col_names[1]))),
-      #                      frank(-get(eval(prioritized_col_names[2]))),
-      #                      frank(-get(eval(prioritized_col_names[3]))),
-      #                      frank(-get(eval(prioritized_col_names[4])))
-      #                    )]
-      DT_tmp[, c("best_order_top02", "best_order_top05", "best_order_top10", "best_order_top15") :=
-               list(frank(-Prior.frac15),frank(-Prior.frac10), frank(-Prior.frac05), frank(-Prior.frac02))]
-
-      if(is.null(DT_per_parameter)){
-        DT_per_parameter <- DT_tmp
-      } else {
-        # DT_per_parameter <- merge(DT_per_parameter, DT_tmp, by = c("Step","Z_threshold", "Max_rxn"))
-        DT_per_parameter <- rbind(DT_per_parameter, DT_tmp)
+  if(is.null(validation_numbers)){
+    # tra_val <- ifelse(val, "val", "tra")
+    # pasted_tra_val <-  paste0(tra_val, validation_number) 
+    DT_tmp <- data.table()
+    DT_tmp1 <- data.table()
+    DT_tmp2 <- data.table()
+    # DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", paste(c("Prior.frac15","Prior.frac10",
+    #                                                       "Prior.frac05","Prior.frac02","Rank.frac.av.rev","Rank.frac.av",
+    #                                                       "Missed","Missed.frac","Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", 
+    #                                                       "Prior.sd10", "Prior.sd05", "Prior.sd02","Rank.frac.sd.rev","Rank.frac.sd",
+    #                                                       "Validation", "Validation_number"), 
+    #                                                     pasted_tra_val, sep = ";")) :=  
+    DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Prior.frac15","Prior.frac10",
+                "Prior.frac05","Prior.frac02","Rank.frac.av.rev","Rank.frac.av",
+                "Missed","Missed.frac","Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", 
+                "Prior.sd10", "Prior.sd05", "Prior.sd02","Rank.frac.sd.rev","Rank.frac.sd") :=  
+              # DT[Include == TRUE & get(eval(paste0("Validation", validation_number))) == val, list(
+              DT[Include == TRUE, list(
+                mean(Prioritised15), # Prior.frac15
+                mean(Prioritised10), # Prior.frac10
+                mean(Prioritised05), # Prior.frac05
+                mean(Prioritised02), # Prior.frac02
+                mean(Rev.Rank.frac), # Prior.pos.frac.av.rev
+                mean(Rank.frac), # Prior.pos.frac.av
+                sum(P.value==1) / nr_seeds, # Missed; if a gene is missed in 1 seed, it is missed in all --> count once per parametercombination
+                mean(P.value==1), # Missed.frac
+                max(Last_position), # Max_Tot.Genes
+                min(Last_position), # Min_Tot.Genes
+                sd(Prioritised15), # Prior.sd15
+                sd(Prioritised10), # Prior.sd10
+                sd(Prioritised05), # Prior.sd05
+                sd(Prioritised02), # Prior.sd02
+                sd(Rev.Rank.frac), # Prior.pos.frac.sd.rev
+                sd(Rank.frac) # Prior.pos.frac.sd
+              ), by = .(Step, Z_threshold, Max_rxn)]]
+    
+    # missed_col_names <- paste(c("Av_non_missed","Sd_non_missed"), pasted_tra_val, sep = ";")
+    
+    # DT_tmp2[, c("Step", "Z_threshold", "Max_rxn", missed_col_names) := 
+    #           DT[P.value != 1, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
+    DT_tmp2[, c("Step", "Z_threshold", "Max_rxn", "Av_non_missed","Sd_non_missed") := 
+              DT[P.value != 1, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
+    
+    DT_tmp <- merge(DT_tmp1, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn"))
+    
+    
+    # prioritized_col_names <- paste(c("Prior.frac15","Prior.frac10", "Prior.frac05","Prior.frac02"), pasted_tra_val, sep = ";")
+    
+    # DT_tmp[, paste(c("best_order_top02", "best_order_top05", "best_order_top10", "best_order_top15"), 
+    #                pasted_tra_val, sep = ";") :=
+    #                    list(
+    #                      frank(-get(eval(prioritized_col_names[1]))),
+    #                      frank(-get(eval(prioritized_col_names[2]))),
+    #                      frank(-get(eval(prioritized_col_names[3]))),
+    #                      frank(-get(eval(prioritized_col_names[4])))
+    #                    )]
+    DT_tmp[, c("best_order_top02", "best_order_top05", "best_order_top10", "best_order_top15") :=
+             list(frank(-Prior.frac02),frank(-Prior.frac05), frank(-Prior.frac10), frank(-Prior.frac15))]
+    
+    if(is.null(DT_per_parameter)){
+      DT_per_parameter <- DT_tmp
+    } else {
+      # DT_per_parameter <- merge(DT_per_parameter, DT_tmp, by = c("Step","Z_threshold", "Max_rxn"))
+      DT_per_parameter <- rbind(DT_per_parameter, DT_tmp)
+    }
+    
+  } else {
+    for(validation_number in c(1:validation_numbers)){
+      for(val in c(TRUE, FALSE)){
+        # tra_val <- ifelse(val, "val", "tra")
+        # pasted_tra_val <-  paste0(tra_val, validation_number) 
+        DT_tmp <- data.table()
+        DT_tmp1 <- data.table()
+        DT_tmp2 <- data.table()
+        # DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", paste(c("Prior.frac15","Prior.frac10",
+        #                                                       "Prior.frac05","Prior.frac02","Rank.frac.av.rev","Rank.frac.av",
+        #                                                       "Missed","Missed.frac","Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", 
+        #                                                       "Prior.sd10", "Prior.sd05", "Prior.sd02","Rank.frac.sd.rev","Rank.frac.sd",
+        #                                                       "Validation", "Validation_number"), 
+        #                                                     pasted_tra_val, sep = ";")) :=  
+        DT_tmp1[, c("Step", "Z_threshold", "Max_rxn", "Prior.frac15","Prior.frac10",
+                    "Prior.frac05","Prior.frac02","Rank.frac.av.rev","Rank.frac.av",
+                    "Missed","Missed.frac","Max_Tot.Genes","Min_Tot.Genes","Prior.sd15", 
+                    "Prior.sd10", "Prior.sd05", "Prior.sd02","Rank.frac.sd.rev","Rank.frac.sd",
+                    "Validation", "Validation_number") :=  
+                  # DT[Include == TRUE & get(eval(paste0("Validation", validation_number))) == val, list(
+                  DT[Include == TRUE & get(eval(paste0("Validation", validation_number))) == val, list(
+                    mean(Prioritised15), # Prior.frac15
+                    mean(Prioritised10), # Prior.frac10
+                    mean(Prioritised05), # Prior.frac05
+                    mean(Prioritised02), # Prior.frac02
+                    mean(Rev.Rank.frac), # Prior.pos.frac.av.rev
+                    mean(Rank.frac), # Prior.pos.frac.av
+                    sum(P.value==1)/ifelse(val, length(validation), length(nr_seeds)-length(validation)), # Missed; if a gene is missed in 1 seed, it is missed in all --> count once per parametercombination
+                    mean(P.value==1), # Missed.frac
+                    max(Last_position), # Max_Tot.Genes
+                    min(Last_position), # Min_Tot.Genes
+                    sd(Prioritised15), # Prior.sd15
+                    sd(Prioritised10), # Prior.sd10
+                    sd(Prioritised05), # Prior.sd05
+                    sd(Prioritised02), # Prior.sd02
+                    sd(Rev.Rank.frac), # Prior.pos.frac.sd.rev
+                    sd(Rank.frac), # Prior.pos.frac.sd
+                    val, # Validation
+                    validation_number # Validation_number
+                  ), by = .(Step, Z_threshold, Max_rxn)]]
+        
+        # missed_col_names <- paste(c("Av_non_missed","Sd_non_missed"), pasted_tra_val, sep = ";")
+        
+        # DT_tmp2[, c("Step", "Z_threshold", "Max_rxn", missed_col_names) := 
+        #           DT[P.value != 1, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
+        DT_tmp2[, c("Step", "Z_threshold", "Max_rxn", "Av_non_missed","Sd_non_missed") := 
+                  DT[P.value != 1, list(mean(Position), sd(Position)), by = .(Step, Z_threshold, Max_rxn)]]
+        
+        DT_tmp <- merge(DT_tmp1, DT_tmp2, by = c("Step","Z_threshold", "Max_rxn"))
+        
+        
+        # prioritized_col_names <- paste(c("Prior.frac15","Prior.frac10", "Prior.frac05","Prior.frac02"), pasted_tra_val, sep = ";")
+        
+        # DT_tmp[, paste(c("best_order_top02", "best_order_top05", "best_order_top10", "best_order_top15"), 
+        #                pasted_tra_val, sep = ";") :=
+        #                    list(
+        #                      frank(-get(eval(prioritized_col_names[1]))),
+        #                      frank(-get(eval(prioritized_col_names[2]))),
+        #                      frank(-get(eval(prioritized_col_names[3]))),
+        #                      frank(-get(eval(prioritized_col_names[4])))
+        #                    )]
+        DT_tmp[, c("best_order_top02", "best_order_top05", "best_order_top10", "best_order_top15") :=
+                 list(frank(-Prior.frac02),frank(-Prior.frac05), frank(-Prior.frac10), frank(-Prior.frac15))]
+        
+        if(is.null(DT_per_parameter)){
+          DT_per_parameter <- DT_tmp
+        } else {
+          # DT_per_parameter <- merge(DT_per_parameter, DT_tmp, by = c("Step","Z_threshold", "Max_rxn"))
+          DT_per_parameter <- rbind(DT_per_parameter, DT_tmp)
+        }
       }
     }
   }
+
   return(DT_per_parameter)
 }
 
-DT_per_parameter <- get_DT_per_parameter(DT, validation_numbers = 10)
+# DT_per_parameter <- get_DT_per_parameter(DT, validation_numbers = 10)
+DT_per_parameter <- get_DT_per_parameter(DT)
 DT_per_parameter$Validation_number <- as.factor(DT_per_parameter$Validation_number)
 DT_per_parameter <- data.table(DT_per_parameter)
 
