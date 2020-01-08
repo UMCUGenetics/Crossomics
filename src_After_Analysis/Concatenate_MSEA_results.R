@@ -121,6 +121,6 @@ DT[, Missed := P.value == 1]
 
 
 
-
 saveRDS(DT, file = paste0(code_dir,"/../Results/",date,"/MSEA_DT_compiled_all.RDS"))
 
+# handy to save a simple text file here as well with all the disease genes that are actually used.
