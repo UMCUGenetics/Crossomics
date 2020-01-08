@@ -236,25 +236,25 @@ saveRDS(DT_per_parameter, paste0(code_dir, date,"/MSEA_DT_per_parameter.RDS"))
 
 DT_validation_per_parameter <- data.table()
 DT_validation_per_parameter[ , c("Step", "Z_threshold", "Max_rxn", "Validation", 
-          "Av.prior.frac15", "Av.prior.frac10", "Av.prior.frac05", "Av.prior.frac02",
-          "Sd.prior.frac15", "Sd.prior.frac10", "Sd.prior.frac05", "Sd.prior.frac02") := 
-       DT_per_parameter[ , list(
-         mean(Prior.frac15), 
-         mean(Prior.frac10),
-         mean(Prior.frac05),
-         mean(Prior.frac02),
-         sd(Prior.frac15),
-         sd(Prior.frac10),
-         sd(Prior.frac05),
-         sd(Prior.frac02)) , by = .(Step, Z_threshold, Max_rxn, Validation)]
-       ]
+                                 "Av.prior.frac15", "Av.prior.frac10", "Av.prior.frac05", "Av.prior.frac02",
+                                 "Sd.prior.frac15", "Sd.prior.frac10", "Sd.prior.frac05", "Sd.prior.frac02") := 
+                               DT_per_parameter_tra_val[ , list(
+                                 mean(Prior.frac15), 
+                                 mean(Prior.frac10),
+                                 mean(Prior.frac05),
+                                 mean(Prior.frac02),
+                                 sd(Prior.frac15),
+                                 sd(Prior.frac10),
+                                 sd(Prior.frac05),
+                                 sd(Prior.frac02)) , by = .(Step, Z_threshold, Max_rxn, Validation)]
+                             ]
 
 DT_validation_per_parameter[, c("best_order_top15", "best_order_top10", "best_order_top05", "best_order_top02") :=
          list(frank(-Av.prior.frac15),frank(-Av.prior.frac10), frank(-Av.prior.frac05), frank(-Av.prior.frac02)) , by = Validation]
 
 DT_validation_per_parameter <- as.data.table(DT_validation_per_parameter)
 
-saveRDS(DT_validation_per_parameter, paste0(code_dir, date,"/MSEA_DT_by_validation_per_parameter.RDS"))
+saveRDS(DT_validation_per_parameter, paste0(code_dir, date,"/MSEA_DT_per_parameter_tra_val_summary.RDS"))
 
 
 
