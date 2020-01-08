@@ -42,6 +42,7 @@ seeds <- sub(x = list.files(path = paste0(code_dir, "/../Results/Mock_genes/",se
 seeds <- as.numeric(seeds[!grepl("[a-z]", seeds)])
 patient_info_file <- "Crossomics_DBS_Marten_trimmed20191205.RData"
 
+# These patients have multiple possible disease genes. It is declared here which gene is taken as true disease gene.
 patient_gene_combinations <- data.frame("PatientID" = c("P286^RES_DBS_20181001_Run1_Algoritmetest_1", 
                                                         "P268^RES_DBS_20181001_Run1_Algoritmetest_1", 
                                                         "P013^2017_008_MetabolomicsDiagnosis_RUN1_1", 
