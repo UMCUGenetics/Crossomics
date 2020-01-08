@@ -38,10 +38,12 @@ library(stringr)
 date <- "2019-12-10"
 
 # Determine which runs will be training and which are validation with this seed:
-validation_seed <- 19582
+# validation_seed <- 19582
 
 # 10 random seeds from random number generator (google) from 1 to 10000:
-validation_seeds <- c(3672, 2238, 1612, 181, 4963, 2477, 5427, 6549, 6095, 6798)
+select_val_seeds <- c(3672, 2238, 1612, 181, 4963, 2477, 5427, 6549, 6095, 6798)
+
+nr_val_seeds <- 20
 
 
 
@@ -55,11 +57,10 @@ code_dir <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"/../Res
 
 DT <- data.table::as.data.table(readRDS(paste0(code_dir,date,"/MSEA_DT_compiled_all.RDS")))
 seeds <- unique(DT[, Seed])
-nr_seeds <- length(seeds)
 
-for(i in 1:length(validation_seeds)){
-  set.seed(seed = validation_seeds[i])
-  validation <- sample(seeds, 20)
+for(i in 1:length(select_val_seeds)){
+  set.seed(seed = select_val_seeds[i])
+  validation <- sample(seeds, nr_val_seeds)
   DT[, paste0("Validation", i) := Seed %in% validation]
 }
 
@@ -76,8 +77,9 @@ DT[,c("Prioritised15","Prioritised10","Prioritised05","Prioritised02") :=
 # data table per parameter ------------------------------------------------
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-get_DT_per_parameter <- function(DT, validation_numbers = NULL){
+get_DT_per_parameter <- function(DT, validation_numbers = NULL, nr_val_seeds = NULL){
   DT_per_parameter <- NULL
+  nr_seeds <- length(unique(DT[, Seed]))
   if(is.null(validation_numbers)){
     # tra_val <- ifelse(val, "val", "tra")
     # pasted_tra_val <-  paste0(tra_val, validation_number) 
@@ -102,8 +104,8 @@ get_DT_per_parameter <- function(DT, validation_numbers = NULL){
                 mean(Prioritised02), # Prior.frac02
                 mean(Rev.Rank.frac), # Prior.pos.frac.av.rev
                 mean(Rank.frac), # Prior.pos.frac.av
-                sum(P.value==1) / nr_seeds, # Missed; if a gene is missed in 1 seed, it is missed in all --> count once per parametercombination
-                mean(P.value==1), # Missed.frac
+                sum(Missed) / nr_seeds, # Missed; if a gene is missed in 1 seed, it is missed in all --> count once per parametercombination
+                mean(Missed), # Missed.frac
                 max(Last_position), # Max_Tot.Genes
                 min(Last_position), # Min_Tot.Genes
                 sd(Prioritised15), # Prior.sd15
@@ -171,8 +173,8 @@ get_DT_per_parameter <- function(DT, validation_numbers = NULL){
                     mean(Prioritised02), # Prior.frac02
                     mean(Rev.Rank.frac), # Prior.pos.frac.av.rev
                     mean(Rank.frac), # Prior.pos.frac.av
-                    sum(P.value==1)/ifelse(val, length(validation), length(nr_seeds)-length(validation)), # Missed; if a gene is missed in 1 seed, it is missed in all --> count once per parametercombination
-                    mean(P.value==1), # Missed.frac
+                    sum(Missed)/ifelse(val, nr_val_seeds, nr_seeds - nr_val_seeds), # Missed; if a gene is missed in 1 seed, it is missed in all --> count once per parametercombination
+                    mean(Missed), # Missed.frac
                     max(Last_position), # Max_Tot.Genes
                     min(Last_position), # Min_Tot.Genes
                     sd(Prioritised15), # Prior.sd15
@@ -221,9 +223,13 @@ get_DT_per_parameter <- function(DT, validation_numbers = NULL){
   return(DT_per_parameter)
 }
 
-# DT_per_parameter <- get_DT_per_parameter(DT, validation_numbers = 10)
+DT_per_parameter_tra_val <- get_DT_per_parameter(DT, validation_numbers = 10, nr_val_seeds)
+DT_per_parameter_tra_val$Validation_number <- as.factor(DT_per_parameter_tra_val$Validation_number)
+DT_per_parameter_tra_val <- data.table(DT_per_parameter_tra_val)
+
+saveRDS(DT_per_parameter_tra_val, paste0(code_dir, date,"/MSEA_DT_per_parameter_tra_val.RDS"))
+
 DT_per_parameter <- get_DT_per_parameter(DT)
-DT_per_parameter$Validation_number <- as.factor(DT_per_parameter$Validation_number)
 DT_per_parameter <- data.table(DT_per_parameter)
 
 saveRDS(DT_per_parameter, paste0(code_dir, date,"/MSEA_DT_per_parameter.RDS"))
