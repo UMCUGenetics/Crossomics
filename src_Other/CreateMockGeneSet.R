@@ -10,7 +10,7 @@ dir.create(path, recursive = TRUE)
 
 
 # Load dataset containing patients with their disease genes (dataset is called xls_data and is a data.table)
-load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_Training.RData"))
+load(paste0(code_dir,"/../Data/Crossomics_DBS_Marten_trimmed20191205.RData"))
 dis_genes <- unique(xls_data$Gene)
 # dis_genes[dis_genes == "MUT"] <- "MMUT" # Fix incorrect MUT name
 # # Disease genes can and will be formatted incorrectly with both ; and , as separators
