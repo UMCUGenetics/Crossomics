@@ -1,6 +1,7 @@
-## README folder structure of Cross-omics
+# README folder structure of Cross-omics
 
-# Data folder
+## Data folder
+(not uploaded to github)
 * Results from the initial metabolite set creation and extension are saved in the 2019-09-12 folder. These are present here and not in the results, because they are used as existing data for the Gene_Metabolite_Mapping part of Cross-omics.
 * All patient meta-data is present in the 'Crossomics_DBS....xlsx' and '.RData' files. The most recent date is used in the most recent cross-omics run.
 * Patient metabolite Z-scores are present in the 'Project ...' folders.
@@ -10,26 +11,28 @@
 * A list of all Gene-name to HMDB code translations is present in the 'HGNC2Uniprot....RDS' file
 * Metabolite - reaction data from Recon3D is present.
 
-# Results folder
+## Results folder
+(not uploaded to github)
 * Results from different runs are present under the date they have been run. The most recent one (2019-12-10) is used for the paper as it is now (2020-01-09).
 * The simulated WES results as used for the metabolite mapping are present in the Mock_genes folder. Inside the most recent date was used for the most recent run. 
 
-# Plots folder
+## Plots folder
+(not uploaded to github)
 * All plots that I made since september. I used to have the R script create a folder by the date I made the plots, but I switched in December to have the date of the Cross-omics run as date of the folder. So all plots used in the paper are present in 2019-12-10.
 
-# src_Metabolite_Set_Creation
+## src_Metabolite_Set_Creation
 All code used for creating and extending the gene-metabolite sets. 
 * All scripts in the main folder are 'primary' scripts and are the ones that need to be run. 
 * Scripts used by the main script are in the 'Supportive' folder.
 * Scripts to run the R scripts from the terminal are present in the 'Run_files' folder. 
 
-# src_Metabolite_Mapper
+## src_Metabolite_Mapper
 All code used for running the cross-omics scripts when the metabolite sets have been made and the patient Z-score files are present.
 * All scripts in the main folder are 'primary' scripts and are the ones that need to be run. 
 * Scripts used by the main script are in the 'Supportive' folder.
 * Scripts to run the R scripts from the terminal are present in the 'Run_files' folder. 
 
-# src_After_Analysis
+## src_After_Analysis
 All code used for plotting and summarizing results
 * Concatenate_MSEA_results.R, followed by Summarise_MSEA_Results.R must be run to collate and summarise all the results coming from the metabolite mapper scripts before it can be visualised. These scripts will create .RDS output files in the Results folder
 * Prioritised_gene_analysis.R is the script that I used for the majority of plotting (try-outs) and contains the code for the facet plot that visualises the fraction of correctly prioritised disease genes per parameter.
@@ -37,7 +40,7 @@ All code used for plotting and summarizing results
 * Nmr_aberrant_mets_per_patient.R summarises the number of aberrant metabolites for the disease gene of a patient per Z-score threshold. This script will create a .RDS output file in the Results folder.
 * Distribution_Crossomics_vs_Random.R speaks for itself, but calculates and plots the fraction of 'correctly prioritizated' disease genes per parameter combination and what is expected by random.
 
-# src_Other
+## src_Other
 Scripts that don't necessarily fall within one of the other categories, however, most of them must be run at some point.
 * Between the creation of metabolite sets and running the metabolite mapper, CreateMockGeneSet.R, Patientxls_to_RData.R, Convert_xlsx_to_RDS.R, TranslateToHMDB.R and FixHMDB.R must be run.
 1. CreateMockGeneSet.R speaks for itself. The number of genes in the Mock_gene sets and the number of sets must be adjust manually inside the script.
@@ -48,5 +51,5 @@ Scripts that don't necessarily fall within one of the other categories, however,
 * CreatePatientSubset.R is not used currently, but could be used to create select only a subsection of patients to run.
 * Zip_files.sh is just a simple example how to zip the results coming from the Cross-omics metabolite mapper run on the HPC. 
 
-# Other_files
+## Other_files
 Older description files used to point out what all the code of the metabolite set creation and extention does in a way that I hope people understand.
