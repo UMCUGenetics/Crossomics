@@ -1,14 +1,13 @@
-README - Crossomics Metabolite Set Creation
-
-31-05-2019 - Marten Kerkhofs
-Update: 07-06-2019 - Marten Kerkhofs - Creating initial metabolite set
-
-
+# README - Crossomics Metabolite Set Creation
 This repository is for all Crossomics Metabolite set creation scripts. The main scripts will be run from run_array_job.sh (creating the initial sets) and run.sh (extending the sets).
 
+Edits:
+31-05-2019 - Marten Kerkhofs
+07-06-2019 - Marten Kerkhofs - Creating initial metabolite set
+10-01-2020 - Marten Kerkhofs (just the appearance of the README)
 
 
-INITIAL METABOLITE SET CREATION
+## INITIAL METABOLITE SET CREATION
 GLOBAL: loop: run_array_job.sh 
 		--> array_job.sh 
 			--> findSurroundings.R 
@@ -30,15 +29,14 @@ GLOBAL: loop: run_array_job.sh
 * The output of this process is a folder (mss) which contains the initial metabolite sets. 
 
 
-POSSIBLE IMPROVEMENTS FOR FUTURE
-This process has been run locally on my MAC. It would have been best to perform this pipeline on the hpc, however that is not possible at the moment as rJava can't be loaded inside the qsub/qlogin environment.
-
-Save gene.RData files in gene.RDS files. The RDS-format is a tad easier to work with, although performance should stay the same.
-
+## POSSIBLE IMPROVEMENTS FOR FUTURE
+* This process has been run locally on my MAC. It would have been best to perform this pipeline on the hpc, however I couldn't make rJava work as it should have inside the qsub/qlogin environment.
+* Save gene.RData files in gene.RDS files. The RDS-format is a tad easier to work with, although performance should stay the same.
 
 
 
-EXTENDING METABOLITE SETS
+
+## EXTENDING METABOLITE SETS
 GLOBAL: loop: run.sh
 		--> extend.sh
 			--> extend_Marten_Recon3.R
