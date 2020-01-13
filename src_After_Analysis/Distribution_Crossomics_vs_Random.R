@@ -67,6 +67,9 @@ DT_combined <- rbind(DT_distribution_random, DT_distribution[Include == TRUE,], 
 DT_combined$Par.ID <- factor(DT_combined$Par.ID, 
                              levels = c("Random",best_pars), ordered = TRUE)
 
+DT_combined_all <- rbind(DT_distribution_random, DT_distribution, fill = TRUE)
+DT_combined_all$Par.ID <- factor(DT_combined_all$Par.ID)
+
 #####
 # Visualization
 p <- ggplot(data = DT_combined, aes(x = Par.ID, y = Prior.frac10)) +
@@ -74,6 +77,10 @@ p <- ggplot(data = DT_combined, aes(x = Par.ID, y = Prior.frac10)) +
   labs(y = "Average correct prioritization", x = "Parameter combination")
 
 ggsave(paste0(outdir_name,"/Cross-omics_vs_random_performance.svg"), plot = p,
-       width = 200, height = 50, units = "mm")
+       width = 200, height = 100, units = "mm")
+
+p <- ggplot(data = DT_combined_all, aes(x = Par.ID, y = Prior.frac10)) +
+  geom_boxplot() +
+  labs(y = "Average correct prioritization", x = "Parameter combination", srt=45)
   
                     
