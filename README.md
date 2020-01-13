@@ -1,5 +1,7 @@
 # README folder structure of Cross-omics
 
+The drawio files are visual representations of their names (can be opened with the website: draw.io). The metabolite set creation has been made quite some months ago, but the metabolite mapper is very up to date.
+
 ## Data folder
 (not uploaded to github)
 * Results from the initial metabolite set creation and extension are saved in the 2019-09-12 folder. These are present here and not in the results, because they are used as existing data for the Gene_Metabolite_Mapping part of Cross-omics.
