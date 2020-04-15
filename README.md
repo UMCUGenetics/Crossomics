@@ -1,25 +1,5 @@
 # README folder structure of Cross-omics
 
-## Data folder
-(not uploaded to github)
-* Results from the initial metabolite set creation and extension are saved in the 2019-09-12 folder. These are present here and not in the results, because they are used as existing data for the Gene_Metabolite_Mapping part of Cross-omics.
-* All patient meta-data is present in the 'Crossomics_DBS....xlsx' and '.RData' files. The most recent date is used in the most recent cross-omics run.
-* Patient metabolite Z-scores are present in the 'Project ...' folders.
-* An excel file which includes all patients that have multiple disease genes is present as 'Patients_with....xlsx'.
-* A list of all unique disease that are determined to be 'true' disease genes is present in the 'disease_genes.txt' file.
-* A list of all genes used for the metabolite set creation and simulated WES results is present in 'All_Genes_....txt', with the version of Ensembl in the name.
-* A list of all Gene-name to HMDB code translations is present in the 'HGNC2Uniprot....RDS' file
-* Metabolite - reaction data from Recon3D is present.
-
-## Results folder
-(not uploaded to github)
-* Results from different runs are present under the date they have been run. The most recent one (2019-12-10) is used for the paper as it is now (2020-01-09).
-* The simulated WES results as used for the metabolite mapping are present in the Mock_genes folder. Inside the most recent date was used for the most recent run. 
-
-## Plots folder
-(not uploaded to github)
-* All plots that I made since september. I used to have the R script create a folder by the date I made the plots, but I switched in December to have the date of the Cross-omics run as date of the folder. So all plots used in the paper are present in 2019-12-10.
-
 ## src_Metabolite_Set_Creation
 All code used for creating and extending the gene-metabolite sets. 
 * All scripts in the main folder are 'primary' scripts and are the ones that need to be run. 
@@ -51,5 +31,18 @@ Scripts that don't necessarily fall within one of the other categories, however,
 * CreatePatientSubset.R is not used currently, but could be used to create select only a subsection of patients to run.
 * Zip_files.sh is just a simple example how to zip the results coming from the Cross-omics metabolite mapper run on the HPC. 
 
-## Other_files
-Older description files used to point out what all the code of the metabolite set creation and extention does in a way that I hope people understand.
+## Other folders necessary for all functionalities, but not uploaded to GitHub:
+
+## Data folder
+* Results from the initial metabolite set creation and extension are saved in the 2019-09-12 folder. These are present here and not in the results, because they are used as existing data for the Gene_Metabolite_Mapping part of Cross-omics.
+* All patient meta-data is present in 'Crossomics_DBS....xlsx' and '.RData' files.
+* Patient metabolite Z-scores, present in 'Project ...' folders.
+* An excel file which includes all patients that have multiple disease genes is present as 'Patients_with....xlsx'.
+* A list of all unique diseases that are determined to be 'true' disease genes is present in the 'disease_genes.txt' file.
+* A list of all genes used for the metabolite set creation and simulated WES results is present in 'All_Genes_....txt', with the version of Ensembl in the name.
+* A list of all Gene-name to HMDB code translations, present in a 'HGNC2Uniprot....RDS' file
+* Metabolite - reaction data from Recon3D.
+
+## Results folder
+* Results from different runs are present under the date they have been run.
+* The simulated WES results as used for the metabolite mapping should be present in a Mock_genes folder.
